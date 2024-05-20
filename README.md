@@ -9,6 +9,9 @@ libraries and `apps` for application-specific crates.
 
 ## Libraries
 
+- [did-simple](crates/did-simple) - An easy to use crate for working with
+  Decentralized Identifiers (DIDs).
+
 ## First Time Setup
 
 - Install [rustup](https://rustup.rs)
