@@ -11,7 +11,7 @@ jobs:
     name: Check Formatting
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -22,7 +22,7 @@ jobs:
     name: Lint and Build
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -36,9 +36,16 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2
 
       - name: Test
         run: cargo test --all --all-features --all-targets
+
+  deny:
+    name: Run cargo deny
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: EmbarkStudios/cargo-deny-action@v1
