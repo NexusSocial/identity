@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+	"apps/identity_server",
 	"crates/did-simple",
 ]
 
@@ -13,6 +14,23 @@ edition = "2021"
 rust-version = "1.78.0"
 
 [workspace.dependencies]
+axum = "0.7.5"
+base64 = "0.21.7"
+clap = { version = "4.4.11", features = ["derive"] }
+color-eyre = "0.6"
+did-simple.path = "crates/did-simple"
+eyre = "0.6"
+hex-literal = "0.4.1"
+jose-jwk = { version = "0.1.2", default-features = false }
+rand = "0.8.5"
+serde = { version = "1.0.193", features = ["derive"] }
+serde_json = "1.0.114"
+slotmap = "1.0.7"
+tokio = { version = "1.35.1", default-features = false }
+tower-http = "0.5.2"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+uuid = "1.7.0"
 
 [workspace.dependencies.derive_more]
 version = "0.99"
