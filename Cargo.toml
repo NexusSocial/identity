@@ -21,6 +21,7 @@ color-eyre = "0.6"
 did-simple.path = "crates/did-simple"
 eyre = "0.6"
 hex-literal = "0.4.1"
+http-body-util = "0.1.2"
 jose-jwk = { version = "0.1.2", default-features = false }
 rand = "0.8.5"
 serde = { version = "1.0.193", features = ["derive"] }
@@ -28,6 +29,7 @@ serde_json = "1.0.114"
 slotmap = "1.0.7"
 thiserror = "1.0.64"
 tokio = { version = "1.35.1", default-features = false }
+tower = "0.4.13"
 tower-http = "0.5.2"
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
