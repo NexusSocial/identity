@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = [
+	"crates/did-simple",
+]
+
+# These settings will apply to all members of the workspace that opt in to them
+[workspace.package]
+version = "0.0.0"
+license = "MIT-0 OR Apache-2.0"
+repository = "https://github.com/NexusSocial/identity"
+edition = "2021"
+rust-version = "1.76"
+
+[workspace.dependencies]
+
+[workspace.dependencies.derive_more]
+version = "0.99"
+default-features = false
+features = [
+	"add",
+	"deref",
+	"deref_mut",
+	"mul",
+	"from",
+]
+
+[profile.dev]
+# Enable a small amount of optimization in debug mode
+opt-level = 1
+
+# Enable high optimizations for dependencies, but not for our code:
+[profile.dev.package."*"]
+# Seems to cause crashes on mac on opt-level 3
+opt-level = 2
