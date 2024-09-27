@@ -2,7 +2,7 @@ use std::net::{Ipv6Addr, SocketAddr};
 
 use clap::Parser as _;
 use color_eyre::eyre::Context as _;
-use identity_server::{google_jwks_provider::JwksProvider, MigratedDbPool};
+use identity_server::{jwks_provider::JwksProvider, MigratedDbPool};
 use std::path::PathBuf;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
