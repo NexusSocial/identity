@@ -37,3 +37,5 @@ uuid = { workspace = true, features = ["std", "v4", "serde"] }
 base64.workspace = true
 hex-literal.workspace = true
 tower = { workspace = true, features = ["util"] }
+wiremock.workspace = true
+tracing-test.workspace = true

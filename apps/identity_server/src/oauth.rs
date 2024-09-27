@@ -10,7 +10,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 
-use crate::google_jwks_provider::JwksProvider;
+use crate::jwks_provider::JwksProvider;
 
 #[derive(Debug, Clone)]
 struct RouterState {

@@ -1,5 +1,5 @@
-pub mod google_jwks_provider;
 pub mod jwk;
+pub mod jwks_provider;
 pub mod oauth;
 pub mod v1;
 
