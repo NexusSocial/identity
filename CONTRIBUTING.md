@@ -9,14 +9,6 @@ This document outlines some helpful guidelines if you wish to contribute to the 
 - We enforce that `cargo clippy` passes in CI. Be sure to fix any warnings.
 - We also enforce that tests pass.
 
-## Project Structure
-
-Code broadly useful to the ecosystem should go under the `crates/` directory.
-Application-specific code should go under the `apps/` directory. It is advisable to
-treat your code as application specific initially, and later migrate it to `crates/`
-once you are more confident about how to use it outside your application specific
-context.
-
 ## Style Guide
 
 General guidance:

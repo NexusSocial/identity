@@ -1,16 +1,13 @@
 # NexusSocial Identity Repo
 
-This serves as a monorepo for a variety of projects. See the `crates` dir for
-libraries and `apps` for application-specific crates.
+This serves as a monorepo for projects related to accounts and identity.
 
-## Apps
-
-- [identity_server](apps/identity_server) - HTTP server for running a did:web node.
-
-## Libraries
-
-- [did-simple](crates/did-simple) - An easy to use crate for working with
-  Decentralized Identifiers (DIDs).
+In particular, it hosts:
+* [did-simple](/did-simple) - A simple pure rust and sans-io crate with minimal
+  dependencies to work with did:key and did:web urls, signing, and verifying.
+  did:web
+* [identity-server](/identity-server) - A did:web HTTP server that implements a "sign
+  in with google/meta" approach.
 
 ## First Time Setup
 
