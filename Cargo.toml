@@ -1,8 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-	"apps/identity_server",
-	"crates/did-simple",
+	"did-simple",
+	"header-parsing",
+	"identity-server",
 ]
 
 # These settings will apply to all members of the workspace that opt in to them
@@ -11,7 +12,7 @@ version = "0.0.0"
 license = "MIT-0 OR Apache-2.0"
 repository = "https://github.com/NexusSocial/identity"
 edition = "2021"
-rust-version = "1.78.0"
+rust-version = "1.81.0"
 
 [workspace.dependencies]
 arc-swap = "1.7.1"
@@ -21,9 +22,9 @@ axum-macros = "0.4.1"
 base64 = "0.21.7"
 clap = { version = "4.4.11", features = ["derive"] }
 color-eyre = "0.6"
-did-simple.path = "crates/did-simple"
+did-simple.path = "did-simple"
 eyre = "0.6"
-header-parsing.path = "crates/header-parsing"
+header-parsing.path = "header-parsing"
 hex-literal = "0.4.1"
 http = "1.1.0"
 http-body-util = "0.1.2"
