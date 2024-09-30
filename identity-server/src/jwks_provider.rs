@@ -145,6 +145,7 @@ impl JwksProviderT for HttpProvider {
 
 /// Always provides the same JWKs.
 #[derive(Debug, Clone)]
+#[expect(dead_code)]
 struct StaticProvider(Arc<CachedJwks>);
 
 #[async_trait]
