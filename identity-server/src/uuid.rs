@@ -14,7 +14,6 @@ pub struct UuidProvider {
 }
 
 impl UuidProvider {
-	#[allow(dead_code)]
 	pub fn new_thread_local() -> Self {
 		Self {
 			#[cfg(test)]
@@ -66,7 +65,7 @@ struct TestSequence {
 impl TestSequence {
 	/// # Panics
 	/// Panics if len of vec is 0
-	#[allow(dead_code)]
+	#[cfg_attr(not(test), expect(dead_code))]
 	fn new(uuids: Vec<Uuid>) -> Self {
 		assert!(!uuids.is_empty());
 		Self {
