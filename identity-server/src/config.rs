@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub const DEFAULT_CONFIG_CONTENTS: &str = include_str!("../default_config.toml");
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
 pub enum DatabaseConfig {
 	Sqlite { db_file: PathBuf },
 }
@@ -33,30 +33,24 @@ pub struct CacheSettings {
 #[serde(deny_unknown_fields)]
 pub struct HttpConfig {
 	/// If `0`, uses a random available port.
-	pub port: u16,
-}
-
-impl Default for HttpConfig {
-	fn default() -> Self {
-		Self { port: 80 }
-	}
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct HttpsConfig {
-	/// If `0`, uses a random available port.
+	#[serde(default = "HttpConfig::default_port")]
 	pub port: u16,
 	#[serde(default)]
 	pub tls: TlsConfig,
 }
 
-impl Default for HttpsConfig {
+impl Default for HttpConfig {
 	fn default() -> Self {
 		Self {
-			port: 443,
+			port: Self::default_port(),
 			tls: TlsConfig::default(),
 		}
+	}
+}
+
+impl HttpConfig {
+	const fn default_port() -> u16 {
+		443
 	}
 }
 
@@ -87,6 +81,8 @@ pub struct GoogleSettings {
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
 pub enum TlsConfig {
+	/// Don't use any tls. Revert to HTTP only.
+	Disable,
 	/// LetsEncrypt's certificate authoriy and the TLS-ALPN-01 challenge type to get a
 	/// valid signed certificate.
 	/// Read more at https://letsencrypt.org/docs/challenge-types/#tls-alpn-01
@@ -123,15 +119,13 @@ pub enum ConfigError {
 
 /// The contents of the config file. Contains all settings customizeable during
 /// deployment.
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
 	#[serde(default)]
 	pub database: DatabaseConfig,
-	#[serde(default = "default_some")]
-	pub http: Option<HttpConfig>,
-	#[serde(default = "default_some")]
-	pub https: Option<HttpsConfig>,
+	#[serde(default)]
+	pub http: HttpConfig,
 	#[serde(default)]
 	pub cache: CacheSettings,
 	#[serde(default)]
@@ -147,18 +141,6 @@ impl FromStr for Config {
 	}
 }
 
-impl Default for Config {
-	fn default() -> Self {
-		Self {
-			database: DatabaseConfig::default(),
-			http: Some(HttpConfig::default()),
-			https: Some(HttpsConfig::default()),
-			cache: CacheSettings::default(),
-			third_party: ThirdPartySettings::default(),
-		}
-	}
-}
-
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -170,13 +152,12 @@ mod test {
 			database: DatabaseConfig::Sqlite {
 				db_file: PathBuf::from("./identities.db"),
 			},
-			http: Some(HttpConfig { port: 80 }),
-			https: Some(HttpsConfig {
+			http: HttpConfig {
 				port: 443,
 				tls: TlsConfig::Acme {
 					domains: Vec::new(),
 				},
-			}),
+			},
 			cache: CacheSettings { dir: None },
 			third_party: ThirdPartySettings {
 				google: Some(GoogleSettings {
@@ -188,7 +169,7 @@ mod test {
 
 	#[test]
 	fn test_empty_config_file_deserializes_to_default() {
-		let config = Config::from_str("").unwrap();
+		let config = Config::from_str("").expect("config file should deserialize");
 		assert_eq!(config, default_config());
 		assert_eq!(config, Config::default());
 	}
@@ -198,5 +179,39 @@ mod test {
 		let deserialized: Config = toml::from_str(DEFAULT_CONFIG_CONTENTS)
 			.expect("default config file should always deserialize");
 		assert_eq!(deserialized, Config::default());
+	}
+
+	#[test]
+	fn test_disabling_tls_keeps_all_other_defaults() {
+		let config = Config::from_str(r#"http.tls.type = "disable""#)
+			.expect("config file should deserialize");
+		let expected = Config {
+			http: HttpConfig {
+				tls: TlsConfig::Disable,
+				..HttpConfig::default()
+			},
+			..Config::default()
+		};
+		assert_eq!(config, expected);
+	}
+
+	#[test]
+	fn test_database_config_with_custom_sqlite_path() {
+		const CONTENTS: &str = r#"
+            [database]
+            type = "sqlite"
+            db_file = "../../foobar.db"
+        "#;
+		let config =
+			Config::from_str(CONTENTS).expect("config file should deserialize");
+		assert_eq!(
+			config,
+			Config {
+				database: DatabaseConfig::Sqlite {
+					db_file: PathBuf::from("../../foobar.db")
+				},
+				..Config::default()
+			}
+		);
 	}
 }

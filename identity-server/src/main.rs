@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser as _;
-use color_eyre::eyre::{ensure, Context, OptionExt, Result};
+use color_eyre::eyre::{Context, OptionExt, Result};
 use futures::FutureExt;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
@@ -9,9 +9,9 @@ use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use identity_server::{
-	config::{Config, DatabaseConfig},
+	config::{Config, DatabaseConfig, TlsConfig},
 	jwks_provider::JwksProvider,
-	spawn_http_redirect_server, spawn_http_server, spawn_https_server, MigratedDbPool,
+	spawn_http_server, spawn_https_server, MigratedDbPool,
 };
 
 const GOOGLE_CLIENT_ID_DOCS_URL: &str = "https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#get_your_google_api_client_id";
@@ -25,48 +25,40 @@ struct Cli {
 /// Convenient container to manager all tasks that need to be monitored and reaped.
 #[derive(Debug)]
 struct Tasks {
-	http: Option<(JoinHandle<Result<()>>, oneshot::Sender<()>)>,
-	https: Option<(JoinHandle<Result<()>>, oneshot::Sender<()>)>,
+	http: (JoinHandle<Result<()>>, oneshot::Sender<()>),
 }
 
 impl Tasks {
+	/// Spawns all subtasks
+	async fn spawn(config_file: Config, router: axum::Router) -> Result<Self> {
+		let (http_task, http_kill_signal) =
+			if matches!(config_file.http.tls, TlsConfig::Disable) {
+				let tuple = spawn_http_server(config_file.http, router)
+					.await
+					.wrap_err("failed to spawn http server")?;
+				(tuple.0, tuple.1)
+			} else {
+				let tuple = spawn_https_server(config_file.http, router)
+					.await
+					.wrap_err("failed to spawn http server")?;
+				(tuple.0, tuple.1)
+			};
+
+		Ok(Tasks {
+			http: (http_task, http_kill_signal),
+		})
+	}
+
 	/// Runs all tasks
 	async fn run(self) -> Result<()> {
 		let tasks_fut = async move {
-			match self {
-				Tasks {
-					http: None,
-					https: None,
-				} => unreachable!("at least one server type should be running"),
-				Tasks {
-					http: Some((http_handle, _http_kill)),
-					https: None,
-				} => http_handle
-					.await
-					.wrap_err("HTTP server panicked")?
-					.wrap_err("HTTP server exited abnormally"),
-				Tasks {
-					http: None,
-					https: Some((https_handle, _https_kill)),
-				} => https_handle
-					.await
-					.wrap_err("HTTPS server panicked")?
-					.wrap_err("HTTPS server exited abnormally"),
-				Tasks {
-					http: Some((http_handle, _http_kill)),
-					https: Some((https_handle, _https_kill)),
-				} => {
-					let ((), ()) = tokio::try_join!(
-						http_handle.map(|r| r
-							.wrap_err("HTTP server panicked")?
-							.wrap_err("HTTP server exited abnormally")),
-						https_handle.map(|r| r
-							.wrap_err("HTTPS server panicked")?
-							.wrap_err("HTTPS server exited abnormally"))
-					)?;
-					Ok(())
-				}
-			}
+			let Tasks {
+				http: (http_handle, _http_kill),
+			} = self;
+			http_handle
+				.await
+				.wrap_err("HTTP server panicked")?
+				.wrap_err("HTTP server exited abnormally")
 		};
 
 		let kill_fut = tokio::signal::ctrl_c().map(|r| {
@@ -78,46 +70,6 @@ impl Tasks {
 			result = kill_fut => result,
 			result = tasks_fut => result,
 		}
-	}
-
-	async fn spawn(config_file: Config, router: axum::Router) -> Result<Self> {
-		ensure!(
-			config_file.http.is_some() || config_file.https.is_some(),
-			"at least one of the `http` or `https` sections in config.toml must \
-            be provided"
-		);
-		Ok(if let Some(https_cfg) = config_file.https {
-			let (https_task, https_kill_signal, https_port) =
-				spawn_https_server(https_cfg, router)
-					.await
-					.wrap_err("failed to spawn http server")?;
-			let https = Some((https_task, https_kill_signal));
-
-			let http = if let Some(http_cfg) = config_file.http {
-				let (http_task, http_kill_signal, _http_port) =
-					spawn_http_redirect_server(http_cfg.port, https_port)
-						.await
-						.wrap_err("failed to spawn http redirect server")?;
-				Some((http_task, http_kill_signal))
-			} else {
-				None
-			};
-
-			Tasks { http, https }
-		} else {
-			let http_cfg = config_file.http.expect(
-				"infallible: we already know that it is Some, since https is None",
-			);
-			let (http_task, http_kill_signal, _http_port) =
-				spawn_http_server(http_cfg, router)
-					.await
-					.wrap_err("failed to spawn http server")?;
-
-			Tasks {
-				https: None,
-				http: Some((http_task, http_kill_signal)),
-			}
-		})
 	}
 }
 
