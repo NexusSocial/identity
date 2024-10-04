@@ -1,0 +1,35 @@
+# Default settings. Alternative options are commented out.
+
+# Note: If both HTTP and HTTPS are enabled, the HTTP server will always redirect to the
+# HTTPS endpoints.
+[http]
+port = 80 # also supports 0 to mean random
+
+# Note: Enabling HTTPS always will force HSTS on.
+[https]
+port = 443 # also supports 0 to mean random
+
+[https.tls]
+type = "acme" # requires publicly visible port to be 443, otherwise the challenge fails
+domains = [] # The public domain name(s). Should not include the url scheme.
+# domains = ["socialvr.net", "socialvr.net:1337", "10.11.12.13"]
+
+# [https.tls]
+# type = "self_signed"
+# domains = ["socialvr.net"]
+
+# [https.tls]
+# type = "file"
+# cert_path = "path/to/cert.pem"
+# private_key_path = "another/path/key.pem"
+
+[third_party.google]
+# To get the client id, follow the instructions at:
+# https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#get_your_google_api_client_id
+oauth2_client_id = ""
+
+[cache]
+# By default, we use the cache directory on your machine (from
+# `$XDG_CACHE_HOME/vr_identity` or `~/.config/cache/vr_identity`
+# dir = "path/to/my/cache/dir"
+
