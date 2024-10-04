@@ -31,6 +31,6 @@ oauth2_client_id = ""
 
 [cache]
 # By default, we use the cache directory on your machine (from
-# `$XDG_CACHE_HOME/vr_identity` or `~/.config/cache/vr_identity`
+# `$XDG_CACHE_HOME/nexus_identity_server` or `~/.config/cache/nexus_identity_server`
 # dir = "path/to/my/cache/dir"
 

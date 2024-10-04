@@ -5,7 +5,7 @@ use color_eyre::eyre::{Context, OptionExt, Result};
 use futures::FutureExt;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use identity_server::{
@@ -134,6 +134,23 @@ async fn main() -> Result<()> {
 	.build()
 	.await
 	.wrap_err("failed to build router")?;
+
+	let cache_dir = if let Some(ref dir) = config_file.cache.dir {
+		dir.to_owned()
+	} else {
+		let home_dir = std::env::var("HOME")
+			.map(PathBuf::from)
+			.unwrap_or(std::env::current_dir().wrap_err("no home dir")?);
+		std::env::var("XDG_CACHE_HOME")
+			.map(PathBuf::from)
+			.unwrap_or(home_dir.join(".cache"))
+			.join("nexus_identity_server")
+	};
+	debug!("using cache dir {}", cache_dir.display());
+	// .join(if cli.prod_tls { "prod" } else { "dev" });
+	tokio::fs::create_dir_all(&cache_dir)
+		.await
+		.wrap_err("failed to create cache directory for certs")?;
 
 	Tasks::spawn(config_file, router)
 		.await
