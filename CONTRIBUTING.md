@@ -46,6 +46,22 @@ General guidance:
 - Prefer [newtypes][newtype] for stronger type safety whenever possible. Types document
   code better than comments.
 
+## Cross compilation
+
+You will also need to install:
+* [cargo-zigbuild][cargo-zigbuild], with version `0.19.2` or later.
+* [zig][zig], with version `0.13.0` or later.
+
+The following targets are known to work:
+- `x86_64-unknown-linux-gnu`
+- `aarch64-unknown-linux-gnu`
+- `x86_64-pc-windows-gnu`
+- `aarch64-apple-darwin`
+
+If you plan to target MacOS, you will need to be using an apple device on the host. It
+is technically possible using [osxcross][osxcross], if you figure out how to do that,
+let me know.
+
 [workspace inheritance]: https://doc.rust-lang.org/cargo/reference/workspaces.html#the-package-table
 [vscode fmt]: https://stackoverflow.com/a/54665086
 [rustrover fmt]: https://www.jetbrains.com/help/rust/rustfmt.html#rustfmt-on-save
@@ -53,3 +69,6 @@ General guidance:
 [sansio]: https://sans-io.readthedocs.io/
 [carmack style]: https://cbarrete.com/carmack.html
 [newtype]: https://rust-lang.github.io/api-guidelines/type-safety.html#c-newtype
+[osxcross]: https://github.com/tpoechtrager/osxcross
+[cargo-zigbuild]: https://github.com/rust-cross/cargo-zigbuild
+[zig]: https://ziglang.org/learn/getting-started/#managers
