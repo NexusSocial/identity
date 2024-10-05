@@ -60,3 +60,10 @@ opt-level = 1
 [profile.dev.package."*"]
 # Seems to cause crashes on mac on opt-level 3
 opt-level = 2
+
+# What we use when producing artifacts to distribute
+[profile.artifact]
+inherits = "release"
+lto = true
+strip = true
+debug = false
