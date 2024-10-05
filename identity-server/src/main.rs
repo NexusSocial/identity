@@ -1,26 +1,80 @@
-use std::net::{Ipv6Addr, SocketAddr};
+use std::path::PathBuf;
 
 use clap::Parser as _;
-use color_eyre::eyre::Context as _;
-use identity_server::{jwks_provider::JwksProvider, MigratedDbPool};
-use std::path::PathBuf;
-use tracing::info;
+use color_eyre::eyre::{Context, OptionExt, Result};
+use futures::FutureExt;
+use tokio::sync::oneshot;
+use tokio::task::JoinHandle;
+use tracing::{debug, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+use identity_server::{
+	config::{Config, DatabaseConfig, TlsConfig},
+	jwks_provider::JwksProvider,
+	spawn_http_server, spawn_https_server, MigratedDbPool,
+};
+
+const GOOGLE_CLIENT_ID_DOCS_URL: &str = "https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#get_your_google_api_client_id";
 
 #[derive(clap::Parser, Debug)]
 struct Cli {
-	#[clap(long, short, default_value = "0")]
-	port: u16,
-	#[clap(long, env, default_value = "identities.db")]
-	db_path: PathBuf,
-	/// The Google API OAuth2 Client ID.
-	/// See https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
 	#[clap(long, env)]
-	google_client_id: String,
+	config: PathBuf,
+}
+
+/// Convenient container to manager all tasks that need to be monitored and reaped.
+#[derive(Debug)]
+struct Tasks {
+	http: (JoinHandle<Result<()>>, oneshot::Sender<()>),
+}
+
+impl Tasks {
+	/// Spawns all subtasks
+	async fn spawn(config_file: Config, router: axum::Router) -> Result<Self> {
+		let (http_task, http_kill_signal) =
+			if matches!(config_file.http.tls, TlsConfig::Disable) {
+				let tuple = spawn_http_server(config_file.http, router)
+					.await
+					.wrap_err("failed to spawn http server")?;
+				(tuple.0, tuple.1)
+			} else {
+				let tuple = spawn_https_server(config_file, router)
+					.await
+					.wrap_err("failed to spawn http server")?;
+				(tuple.0, tuple.1)
+			};
+
+		Ok(Tasks {
+			http: (http_task, http_kill_signal),
+		})
+	}
+
+	/// Runs all tasks
+	async fn run(self) -> Result<()> {
+		let tasks_fut = async move {
+			let Tasks {
+				http: (http_handle, _http_kill),
+			} = self;
+			http_handle
+				.await
+				.wrap_err("HTTP server panicked")?
+				.wrap_err("HTTP server exited abnormally")
+		};
+
+		let kill_fut = tokio::signal::ctrl_c().map(|r| {
+			info!("detected ctrl-c, shutting down...");
+			r.wrap_err("error getting ctrl-c signal")
+		});
+
+		tokio::select! {
+			result = kill_fut => result,
+			result = tasks_fut => result,
+		}
+	}
 }
 
 #[tokio::main]
-async fn main() -> color_eyre::Result<()> {
+async fn main() -> Result<()> {
 	color_eyre::install()?;
 	tracing_subscriber::registry()
 		.with(EnvFilter::try_from_default_env().unwrap_or("info".into()))
@@ -29,10 +83,17 @@ async fn main() -> color_eyre::Result<()> {
 
 	let cli = Cli::parse();
 
+	let config_file = tokio::fs::read_to_string(cli.config)
+		.await
+		.wrap_err("failed to read config file")?;
+	let config_file: Config =
+		config_file.parse().wrap_err("config file was invalid")?;
+
 	let db_pool = {
+		let DatabaseConfig::Sqlite { ref db_file } = config_file.database;
 		let connect_opts = sqlx::sqlite::SqliteConnectOptions::new()
 			.create_if_missing(true)
-			.filename(&cli.db_path);
+			.filename(db_file);
 		let pool_opts = sqlx::sqlite::SqlitePoolOptions::new();
 		let pool = pool_opts
 			.connect_with(connect_opts.clone())
@@ -54,7 +115,16 @@ async fn main() -> color_eyre::Result<()> {
 		db_pool,
 	};
 	let oauth_cfg = identity_server::oauth::OAuthConfig {
-		google_client_id: cli.google_client_id,
+		google_client_id: config_file
+			.third_party
+			.google
+			.clone()
+			.ok_or_eyre(format!(
+				"currently, setting up google is required. Please follow the \
+                instructions at {GOOGLE_CLIENT_ID_DOCS_URL} and fill in the \
+                `third_party.google.oauth2_client_id` field in the config.toml",
+			))?
+			.oauth2_client_id,
 		google_jwks_provider: JwksProvider::google(reqwest_client.clone()),
 	};
 	let router = identity_server::RouterConfig {
@@ -65,12 +135,16 @@ async fn main() -> color_eyre::Result<()> {
 	.await
 	.wrap_err("failed to build router")?;
 
-	let listener = tokio::net::TcpListener::bind(SocketAddr::new(
-		Ipv6Addr::UNSPECIFIED.into(),
-		cli.port,
-	))
-	.await
-	.unwrap();
-	info!("listening on {}", listener.local_addr().unwrap());
-	axum::serve(listener, router).await.map_err(|e| e.into())
+	let cache_dir = config_file.cache.dir();
+	debug!("using cache dir {}", cache_dir.display());
+	// .join(if cli.prod_tls { "prod" } else { "dev" });
+	tokio::fs::create_dir_all(&cache_dir)
+		.await
+		.wrap_err("failed to create cache directory for certs")?;
+
+	Tasks::spawn(config_file, router)
+		.await
+		.wrap_err("failed to spawn tasks")?
+		.run()
+		.await
 }

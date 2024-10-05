@@ -4,8 +4,13 @@
 
 *.swp
 .DS_Store
+
+# For local development
 .direnv
 .envrc
+my_config.toml
 
 # SQLite
 *.db
+
+
