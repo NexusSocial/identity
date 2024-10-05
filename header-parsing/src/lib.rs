@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![deny(clippy::allow_attributes, unsafe_op_in_unsafe_fn)]
 
 use http::header::{AGE, CACHE_CONTROL};
 use std::time::Duration;

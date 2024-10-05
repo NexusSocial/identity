@@ -21,6 +21,7 @@
 //! [spec]: https://www.w3.org/TR/did-core/
 
 #![cfg_attr(not(feature = "allow-unsafe"), forbid(unsafe_code))]
+#![deny(clippy::allow_attributes, unsafe_op_in_unsafe_fn)]
 
 use std::str::FromStr;
 
