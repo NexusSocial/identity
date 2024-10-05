@@ -88,7 +88,7 @@ impl Default for ThirdPartySettings {
 #[serde(deny_unknown_fields)]
 pub struct GoogleSettings {
 	/// The Google API OAuth2 Client ID.
-	/// See https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
+	/// See <https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid>
 	#[serde(default)]
 	pub oauth2_client_id: String,
 }
@@ -100,7 +100,7 @@ pub enum TlsConfig {
 	Disable,
 	/// LetsEncrypt's certificate authoriy and the TLS-ALPN-01 challenge type to get a
 	/// valid signed certificate.
-	/// Read more at https://letsencrypt.org/docs/challenge-types/#tls-alpn-01
+	/// Read more at <https://letsencrypt.org/docs/challenge-types/#tls-alpn-01>
 	Acme {
 		/// Whether we use the staging or prod LetsEncrypt directory.
 		is_prod: bool,
