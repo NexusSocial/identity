@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::allow_attributes, unsafe_op_in_unsafe_fn)]
+
 pub mod config;
 pub mod jwk;
 pub mod jwks_provider;
