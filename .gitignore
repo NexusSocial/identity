@@ -1,6 +1,7 @@
 /.idea
 /.vscode
 /target
+.intentionally-empty-file.o
 
 *.swp
 .DS_Store
