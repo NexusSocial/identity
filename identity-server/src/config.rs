@@ -7,6 +7,7 @@ use std::{path::PathBuf, str::FromStr};
 use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_CONFIG_CONTENTS: &str = include_str!("../default_config.toml");
+const CACHE_DIR_SUFFIX: &str = "nexus_identity_server";
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
@@ -26,7 +27,21 @@ impl Default for DatabaseConfig {
 #[serde(deny_unknown_fields)]
 pub struct CacheSettings {
 	/// If `None`, relies on `XDG_CACHE_HOME` instead.
-	pub dir: Option<PathBuf>,
+	dir: Option<PathBuf>,
+}
+
+impl CacheSettings {
+	pub fn dir(&self) -> PathBuf {
+		if let Some(ref dir) = self.dir {
+			dir.to_owned()
+		} else {
+			std::env::var("XDG_CACHE_HOME")
+				.map(PathBuf::from)
+				.or_else(|_| std::env::var("HOME").map(PathBuf::from))
+				.unwrap_or_else(|_| std::env::current_dir().unwrap())
+				.join(CACHE_DIR_SUFFIX)
+		}
+	}
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
@@ -87,7 +102,10 @@ pub enum TlsConfig {
 	/// valid signed certificate.
 	/// Read more at https://letsencrypt.org/docs/challenge-types/#tls-alpn-01
 	Acme {
+		/// Whether we use the staging or prod LetsEncrypt directory.
+		is_prod: bool,
 		domains: Vec<String>,
+		email: String,
 	},
 	/// Creates a self-signed certificate
 	SelfSigned {
@@ -102,6 +120,8 @@ impl Default for TlsConfig {
 	fn default() -> Self {
 		Self::Acme {
 			domains: Vec::new(),
+			email: String::new(),
+			is_prod: true,
 		}
 	}
 }
@@ -155,7 +175,9 @@ mod test {
 			http: HttpConfig {
 				port: 443,
 				tls: TlsConfig::Acme {
+					email: String::new(),
 					domains: Vec::new(),
+					is_prod: true,
 				},
 			},
 			cache: CacheSettings { dir: None },

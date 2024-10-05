@@ -38,7 +38,7 @@ impl Tasks {
 					.wrap_err("failed to spawn http server")?;
 				(tuple.0, tuple.1)
 			} else {
-				let tuple = spawn_https_server(config_file.http, router)
+				let tuple = spawn_https_server(config_file, router)
 					.await
 					.wrap_err("failed to spawn http server")?;
 				(tuple.0, tuple.1)
@@ -135,17 +135,7 @@ async fn main() -> Result<()> {
 	.await
 	.wrap_err("failed to build router")?;
 
-	let cache_dir = if let Some(ref dir) = config_file.cache.dir {
-		dir.to_owned()
-	} else {
-		let home_dir = std::env::var("HOME")
-			.map(PathBuf::from)
-			.unwrap_or(std::env::current_dir().wrap_err("no home dir")?);
-		std::env::var("XDG_CACHE_HOME")
-			.map(PathBuf::from)
-			.unwrap_or(home_dir.join(".cache"))
-			.join("nexus_identity_server")
-	};
+	let cache_dir = config_file.cache.dir();
 	debug!("using cache dir {}", cache_dir.display());
 	// .join(if cli.prod_tls { "prod" } else { "dev" });
 	tokio::fs::create_dir_all(&cache_dir)

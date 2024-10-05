@@ -14,8 +14,8 @@ use std::{
 
 use axum::routing::get;
 use color_eyre::{eyre::WrapErr as _, Result};
-use config::TlsConfig;
-use futures::FutureExt;
+use config::{Config, TlsConfig};
+use futures::{FutureExt, StreamExt as _};
 use sqlx::sqlite::SqlitePool;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
@@ -107,26 +107,61 @@ async fn root() -> &'static str {
 
 /// Runs a HTTPS server on a tokio task.
 pub async fn spawn_https_server(
-	cfg: HttpConfig,
+	cfg: Config,
 	router: axum::Router,
 ) -> Result<(
 	tokio::task::JoinHandle<Result<()>>,
 	tokio::sync::oneshot::Sender<()>,
 )> {
-	assert_ne!(
-		cfg.tls,
-		TlsConfig::Disable,
-		"sanity: configs with disabled tls don't make sense here"
-	);
-	let listener = bind_listener(cfg.port).await?;
-	let local_addr = listener.local_addr().unwrap();
-	info!("HTTPS server listening on {local_addr}",);
+	let (domains, email, is_prod) = match cfg.http.tls {
+		TlsConfig::Disable => {
+			panic!("disabled TLS doesn't make sense for a HTTPS server")
+		}
+		TlsConfig::File { .. } => {
+			todo!("have not yet implemented support for cert files")
+		}
+		TlsConfig::SelfSigned { .. } => {
+			todo!("have not yet implemented support for self-signed certs")
+		}
+		TlsConfig::Acme {
+			domains,
+			email,
+			is_prod,
+		} => (domains, email, is_prod),
+	};
+
+	let acme_cfg = rustls_acme::AcmeConfig::new(domains)
+		.cache_option(Some(rustls_acme::caches::DirCache::new(cfg.cache.dir())))
+		.directory_lets_encrypt(is_prod);
+	let acme_cfg = if !email.is_empty() {
+		acme_cfg.contact([format!("mailto:{email}")])
+	} else {
+		acme_cfg
+	};
+	let mut state = acme_cfg.state();
+	let acceptor = state.axum_acceptor(state.default_rustls_config());
+
+	// state event monitoring
+	tokio::spawn(async move {
+		loop {
+			match state.next().await.unwrap() {
+				Ok(ok) => tracing::info!("event: {:?}", ok),
+				Err(err) => tracing::error!("error: {:?}", err),
+			}
+		}
+	});
+
+	let port = cfg.http.port;
+	let serve_fut = async move {
+		axum_server::bind(SocketAddr::new(Ipv6Addr::UNSPECIFIED.into(), port))
+			.acceptor(acceptor)
+			.serve(router.into_make_service())
+			.await
+			.wrap_err("HTTPS server crashed")
+	};
 
 	let (tx, rx) = tokio::sync::oneshot::channel();
 	let task_handle = tokio::spawn(async move {
-		let serve_fut = axum::serve(listener, router)
-			.into_future()
-			.map(|r| r.wrap_err("HTTPS server crashed"));
 		tokio::select! {
 			result = serve_fut => result,
 			_ = rx => {
