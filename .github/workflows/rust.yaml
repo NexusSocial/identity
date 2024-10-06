@@ -1,0 +1,182 @@
+name: Rust CI
+on:
+  workflow_call:
+    inputs:
+      cargo-profile:
+        required: true
+        type: string
+
+env:
+  CI_IS_DEFAULT_BRANCH: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+jobs:
+  fmt:
+    name: Check Formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.2.0
+      - name: Check formatting
+        run: cargo fmt --check --all
+
+  lint:
+    name: Lints
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.2.0
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2.7.3
+        with:
+          save-if: ${{ env.CI_IS_DEFAULT_BRANCH }}
+
+      - name: Clippy lints
+        run: cargo clippy --profile artifact-dev --all --all-features --all-targets --no-deps -- -D warnings
+
+      - name: Cargo Doc
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --profile artifact-dev --all --all-features --no-deps --document-private-items
+
+  test:
+    name: Run Tests
+    strategy:
+      matrix:
+        runs-on: ["ubuntu-24.04", "windows-2022", "macos-14"]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4.2.0
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2.7.3
+        with:
+          save-if: ${{ env.CI_IS_DEFAULT_BRANCH }}
+
+      - name: Test
+        run: cargo test --profile artifact-dev --all --all-features --all-targets
+
+  deny:
+    name: Licensing and Advisories
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4.2.0
+    - uses: EmbarkStudios/cargo-deny-action@v2.0.1
+
+  build:
+    name: Build Binaries
+    env:
+      LINUX: x86_64-unknown-linux-musl 
+      LINUX_ARM: aarch64-unknown-linux-musl 
+      WINDOWS: x86_64-pc-windows-gnu 
+      MACOS: aarch64-apple-darwin
+    # We run the jobs with a matrix, because currently we don't support cross
+    # compilation to macos unless your'e already on macos. And mac runners are
+    # expensive, so we choose to only run the builds for targets on the mac runners.
+    strategy:
+      matrix:
+        runner-vars:
+          - runs-on: macos-14
+            host-triple: aarch64-apple-darwin
+            artifact-name: rust-macos
+          - runs-on: ubuntu-24.04
+            host-triple: x86_64-unknown-linux-musl
+            artifact-name: rust-linux
+    runs-on: ${{ matrix.runner-vars.runs-on }}
+    steps:
+      - uses: actions/checkout@v4.2.0
+      - uses: mlugg/setup-zig@v1.2.1
+        with:
+          version: 0.13.0
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2.7.3
+        with:
+          save-if: ${{ env.CI_IS_DEFAULT_BRANCH }}
+
+      - name: Install cargo-zigbuild
+        run: cargo install --locked cargo-zigbuild@0.19.3
+
+      - name: |
+          Configure cross compilation targets for runner 
+          ${{ matrix.runner-vars.runs-on }} (${{ matrix.runner-vars.host-triple }})
+        run: |
+          case "${{ matrix.runner-vars.host-triple }}" in
+            "${LINUX}" | "${LINUX_ARM}")
+              target_array=("${LINUX}" "${LINUX_ARM}" "${WINDOWS}") ;;
+            "${MACOS}")
+              target_array=("${MACOS}") ;;
+            *)
+              echo "Unexpected value for host triple"
+              exit 1 ;;
+          esac
+          CI_CARGO_TARGETS=""
+          for t in "${target_array[@]}"; do
+            CI_CARGO_TARGETS+="--target ${t} "
+          done
+          echo "CI_CARGO_TARGETS=${CI_CARGO_TARGETS}" >> $GITHUB_ENV
+          echo "CI_CARGO_TARGETS=${CI_CARGO_TARGETS}"
+
+      - name: Cargo zigbuild
+        run: |
+          cargo zigbuild \
+            ${CI_CARGO_TARGETS} \
+            --profile ${{ inputs.cargo-profile }} \
+            --all
+
+      - name: Arrange artifact directory
+        run: |
+          set -Eeuxo pipefail
+          mkdir artifacts
+          # TODO: Make it possible to release *all* binaries in these artifacts, not 
+          # just the identity-server.
+          component="identity-server"
+          if [[ "${{ inputs.cargo-profile }}" == "dev" ]]; then
+            profile_dir="debug"
+          else
+            profile_dir="${{ inputs.cargo-profile }}"
+          fi
+          shopt -s nullglob #https://unix.stackexchange.com/a/293650
+          for f in target/*/"${profile_dir}"/"${component}"{,\.exe}; do
+            target_triple="$(echo "${f}" | cut -d '/' -f2)"
+            case "${target_triple}" in
+              "${LINUX}")
+                mv "${f}" "artifacts/${component}-linux-x86_64" ;;
+              "${LINUX_ARM}")
+                mv "${f}" "artifacts/${component}-linux-aarch64" ;;
+              "${WINDOWS}")
+                mv "${f}" "artifacts/${component}-windows-x86_64.exe" ;;
+              "${MACOS}")
+                mv "${f}" "artifacts/${component}-macos-aarch64" ;;
+              *)
+                echo "Unexpected target triple"
+                exit 1 ;;
+            esac
+          done
+          ls -aRsh artifacts
+      
+      - name: Compute sha256 checksums
+        run: |
+          set -Eeuxo pipefail
+          pushd artifacts
+          for f in *; do
+            shasum -a 256 "${f}" > "${f}.sha256" 
+          done
+          ls -aRsh
+          popd
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: ${{ matrix.runner-vars.artifact-name }}
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            artifacts
+
+  merge:
+    name: Merge Artifacts
+    runs-on: ubuntu-24.04
+    needs: build
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4.4.0
+        with:
+          name: rust
+          compression-level: 9
+          delete-merged: true
+          pattern: rust-*
+

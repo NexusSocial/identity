@@ -1,0 +1,49 @@
+name: Build Containers
+on:
+  workflow_call:
+    inputs:
+      additional-tags:
+        type: string
+      push:
+        required: true
+        type: boolean
+
+jobs:
+  build:
+    name: Build Container
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.2.0
+      - name: Download Rust Artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: rust
+          path: artifacts
+
+      - name: Build Image
+        id: build-image
+        uses: redhat-actions/buildah-build@v2.13
+        with:
+          image: identity-server
+          tags: commit-${{ github.sha }} ${{ inputs.additional-tags }}
+          oci: true
+          containerfiles: |
+            ./identity-server/Dockerfile
+
+      - name: Get registry url
+        run: |
+          # Container registries don't support upper case letters
+          CI_REGISTRY_URL="ghcr.io/${GITHUB_REPOSITORY_OWNER@L}"
+          echo "CI_REGISTRY_URL=${CI_REGISTRY_URL}" >> "${GITHUB_ENV}"
+          echo "CI_REGISTRY_URL=${CI_REGISTRY_URL}"
+
+      - name: Push To Github Packages
+        if: ${{ inputs.push }}
+        uses: redhat-actions/push-to-registry@v2.8
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: ${{ env.CI_REGISTRY_URL }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+          extra-args: --disable-content-trust     
