@@ -26,6 +26,7 @@ jobs:
         with:
           image: identity-server
           tags: commit-${{ github.sha }} ${{ inputs.additional-tags }}
+          platforms: linux/arm64,linux/amd64,windows/amd64
           oci: true
           containerfiles: |
             ./identity-server/Dockerfile
