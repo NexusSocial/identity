@@ -31,8 +31,15 @@ jobs:
           containerfiles: |
             ./identity-server/Dockerfile
 
+      - name: Test container works
+        run: |
+          set -Eeuxo pipefail
+          version="$(podman run --rm "${{ steps.build-image.outputs.image-with-tag }}" --version)"
+          echo "version: ${version}"
+
       - name: Get registry url
         run: |
+          set -Eeuxo pipefail
           # Container registries don't support upper case letters
           CI_REGISTRY_URL="ghcr.io/${GITHUB_REPOSITORY_OWNER@L}"
           echo "CI_REGISTRY_URL=${CI_REGISTRY_URL}" >> "${GITHUB_ENV}"

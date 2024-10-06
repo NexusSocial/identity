@@ -25,8 +25,6 @@ jobs:
       - uses: actions/checkout@v4.2.0
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2.7.3
-        with:
-          save-if: ${{ env.CI_IS_DEFAULT_BRANCH }}
 
       - name: Clippy lints
         run: cargo clippy --profile artifact-dev --all --all-features --all-targets --no-deps -- -D warnings
@@ -44,8 +42,6 @@ jobs:
       - uses: actions/checkout@v4.2.0
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2.7.3
-        with:
-          save-if: ${{ env.CI_IS_DEFAULT_BRANCH }}
 
       - name: Test
         run: cargo test --profile artifact-dev --all --all-features --all-targets
@@ -84,8 +80,6 @@ jobs:
           version: 0.13.0
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2.7.3
-        with:
-          save-if: ${{ env.CI_IS_DEFAULT_BRANCH }}
 
       - name: Install cargo-zigbuild
         run: cargo install --locked cargo-zigbuild@0.19.3

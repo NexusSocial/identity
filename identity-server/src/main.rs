@@ -17,6 +17,7 @@ use identity_server::{
 const GOOGLE_CLIENT_ID_DOCS_URL: &str = "https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#get_your_google_api_client_id";
 
 #[derive(clap::Parser, Debug)]
+#[clap(version)]
 struct Cli {
 	#[clap(long, env)]
 	config: PathBuf,
