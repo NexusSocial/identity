@@ -1,54 +1,55 @@
-name: CI
+name: CI/CD
 on:
+  workflow_call:
   push:
     branches:
       - main
   pull_request:
   workflow_dispatch:
 
+# https://stackoverflow.com/a/72408109
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  fmt:
-    name: Check Formatting
-    runs-on: ubuntu-22.04
+  check-inputs:
+    runs-on: ubuntu-24.04
+    outputs:
+      cargo-profile: ${{ steps.set-cargo-profile.outputs.CI_CARGO_PROFILE }}
+      is-default-branch: ${{ steps.set-is-default-branch.outputs.CI_IS_DEFAULT_BRANCH }}
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Set is-default-branch
+        id: set-is-default-branch
+        run: |
+          CI_IS_DEFAULT_BRANCH="${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}"
+          echo "CI_IS_DEFAULT_BRANCH=${CI_IS_DEFAULT_BRANCH}" >> $GITHUB_OUTPUT
+          echo "CI_IS_DEFAULT_BRANCH=${CI_IS_DEFAULT_BRANCH}" >> $GITHUB_ENV
+          echo "CI_IS_DEFAULT_BRANCH=${CI_IS_DEFAULT_BRANCH}"
+      - name: Set cargo-profile
+        id: set-cargo-profile
+        run: |
+          if [[ ${CI_IS_DEFAULT_BRANCH} == 'true' ]]; then
+            CI_CARGO_PROFILE="artifact"
+          else
+            CI_CARGO_PROFILE="artifact-dev"
+          fi
+          echo "CI_CARGO_PROFILE=${CI_CARGO_PROFILE}" >> $GITHUB_OUTPUT
+          echo "CI_CARGO_PROFILE=${CI_CARGO_PROFILE}"
 
-      - name: Check formatting
-        run: cargo fmt --check --all
+  rust:
+    name: Rust
+    needs: check-inputs
+    uses: ./.github/workflows/rust.yaml
+    with:
+      cargo-profile: ${{ needs.check-inputs.outputs.cargo-profile }}
 
-  check:
-    name: Lint and Build
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
+  container:
+    name: Container
+    needs: [rust, check-inputs]
+    uses: ./.github/workflows/container.yaml
+    with:
+      push: ${{ needs.check-inputs.outputs.is-default-branch == 'true' }}
+      additional-tags: ${{ (needs.check-inputs.outputs.is-default-branch == 'true') && 'latest' || '' }}
 
-      - name: Clippy lints
-        run: cargo clippy --all --all-features --all-targets --no-deps -- -D warnings
-
-      - name: Cargo Doc
-        run: RUSTDOCFLAGS="-D warnings" cargo doc --all --all-features --no-deps --document-private-items
-
-  test:
-    name: Run Tests on all platforms
-    strategy:
-      matrix:
-        runs-on: ["ubuntu-24.04", "windows-2022", "macos-14"]
-    runs-on: ${{ matrix.runs-on }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Test
-        run: cargo test --all --all-features --all-targets
-
-  deny:
-    name: Run cargo deny
-    runs-on: ubuntu-22.04
-    steps:
-    - uses: actions/checkout@v4
-    - uses: EmbarkStudios/cargo-deny-action@v1

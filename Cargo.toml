@@ -56,14 +56,19 @@ default-features = false
 # Enable a small amount of optimization in debug mode
 opt-level = 1
 
-# Enable high optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
-# Seems to cause crashes on mac on opt-level 3
+# Enable high optimizations for dependencies, but not for our code:
 opt-level = 2
 
-# What we use when producing artifacts to distribute
+# What we use when producing artifacts to distribute, size matters more than speed
 [profile.artifact]
 inherits = "release"
 lto = true
+strip = true
+debug = false
+
+# What we use when producing artifacts in PRs, speed matters more than size
+[profile.artifact-dev]
+inherits = "dev"
 strip = true
 debug = false
