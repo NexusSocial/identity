@@ -1,7 +1,7 @@
-use std::path::PathBuf;
+use std::{io::IsTerminal as _, path::PathBuf};
 
 use clap::Parser as _;
-use color_eyre::eyre::{Context, OptionExt, Result};
+use color_eyre::eyre::{bail, Context, OptionExt, Result};
 use futures::FutureExt;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
@@ -81,6 +81,14 @@ async fn main() -> Result<()> {
 		.with(tracing_subscriber::fmt::layer())
 		.init();
 
+	if is_root() {
+		bail!("You should only run this program as a non-root user");
+	}
+
+	if std::io::stdout().is_terminal() {
+		debug!("We don't appear to be in a terminal");
+	}
+
 	let cli = Cli::parse();
 
 	let config_file = tokio::fs::read_to_string(cli.config)
@@ -147,4 +155,12 @@ async fn main() -> Result<()> {
 		.wrap_err("failed to spawn tasks")?
 		.run()
 		.await
+}
+
+fn is_root() -> bool {
+	#[cfg(unix)]
+	let result = rustix::process::getuid().is_root();
+	#[cfg(windows)]
+	let result = false;
+	result
 }

@@ -14,7 +14,7 @@ axum = { workspace = true, features = [] }
 axum-extra = { workspace = true, features = ["cookie"] }
 axum-macros.workspace = true
 axum-server = { workspace = true, features = ["tls-rustls-no-provider"] }
-clap = { workspace = true, features = ["derive", "env"] }
+clap = { workspace = true, features = ["derive", "env", "color"] }
 color-eyre.workspace = true
 derive_more = { workspace = true, features = ["debug"] }
 did-simple.workspace = true
@@ -37,6 +37,7 @@ tower-http = { workspace = true, features = ["trace", "fs"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing.workspace = true
 uuid = { workspace = true, features = ["std", "v4", "serde"] }
+rustix = { version = "0.38.37", features = ["process"] }
 
 [dev-dependencies]
 base64.workspace = true
