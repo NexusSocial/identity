@@ -47,4 +47,3 @@ jobs:
           registry: ${{ env.CI_REGISTRY_URL }}
           username: ${{ github.actor }}
           password: ${{ github.token }}
-          extra-args: --disable-content-trust     
