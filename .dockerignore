@@ -1,1 +1,5 @@
- 
+# Ignore everything
+*
+
+# Allow only the artifacts
+!/artifacts/*

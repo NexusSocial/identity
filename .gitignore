@@ -1,6 +1,7 @@
 /.idea
 /.vscode
 /target
+/artifacts
 .intentionally-empty-file.o
 
 *.swp
@@ -13,5 +14,3 @@ my_config.toml
 
 # SQLite
 *.db
-
-
