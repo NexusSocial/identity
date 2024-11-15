@@ -15,7 +15,6 @@ rust-build:
 
 # Copy artifacts from cargo target dir into to the artifacts directory
 artifacts: rust-build
-    pwd
     mkdir -p {{artifacts_dir}}
     cp {{target_dir}}/aarch64-apple-darwin/artifact/{{package_name}} {{artifacts_dir}}/{{package_name}}-macos-aarch64
     cp {{target_dir}}/x86_64-unknown-linux-musl/artifact/{{package_name}} {{artifacts_dir}}/{{package_name}}-linux-x86_64

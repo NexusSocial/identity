@@ -10,7 +10,7 @@
 # For local development
 .direnv
 .envrc
-my_config.toml
+my-config.toml
 
 # SQLite
 *.db
