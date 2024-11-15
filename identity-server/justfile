@@ -1,0 +1,34 @@
+# Define variables
+artifacts_dir := "artifacts"
+target_dir := "../target"
+package_name := "identity-server"
+targets := ("x86_64-unknown-linux-musl"
++ "aarch64-unknown-linux-musl"
++ "x86_64-pc-windows-gnu"
++ "aarch64-apple-darwin")
+
+default: all
+
+# Build Rust binaries for different targets
+rust-build:
+	cargo-zigbuild build --profile artifact -p {{package_name}} --target aarch64-apple-darwin --target x86_64-pc-windows-gnu --target aarch64-unknown-linux-musl --target x86_64-unknown-linux-musl
+
+# Copy artifacts from cargo target dir into to the artifacts directory
+artifacts: rust-build
+    pwd
+    mkdir -p {{artifacts_dir}}
+    cp {{target_dir}}/aarch64-apple-darwin/artifact/{{package_name}} {{artifacts_dir}}/{{package_name}}-macos-aarch64
+    cp {{target_dir}}/x86_64-unknown-linux-musl/artifact/{{package_name}} {{artifacts_dir}}/{{package_name}}-linux-x86_64
+    cp {{target_dir}}/aarch64-unknown-linux-musl/artifact/{{package_name}} {{artifacts_dir}}/{{package_name}}-linux-aarch64
+    cp {{target_dir}}/x86_64-pc-windows-gnu/artifact/{{package_name}}.exe {{artifacts_dir}}/{{package_name}}-windows-x86_64.exe
+
+# Build Docker image
+podman: artifacts
+    podman build --platform linux/arm64,linux/amd64,windows/amd64 .
+
+# Clean artifacts
+clean:
+    rm -rf {{artifacts_dir}}
+
+# Run all tasks
+all: rust-build artifacts podman
