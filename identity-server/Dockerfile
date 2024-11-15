@@ -9,18 +9,25 @@ ARG TARGETPLATFORM
 
 COPY --from=distroless /etc/passwd /etc/passwd
 COPY --from=distroless /etc/group /etc/group
-USER nonroot
+USER nonroot:nonroot
 ENV USER=nonroot
 
-ENV XDG_CACHE_HOME=/home/nonroot/.cache
-VOLUME ["/home/nonroot/.cache"]
+ENV XDG_CACHE_HOME=/var/.cache
+# Only here to create the .cache folder
+COPY --chmod=644 --chown=nonroot:nonroot .empty /var/.cache/.empty
+VOLUME ["/var"]
+WORKDIR ["/var"]
+
+ENV XDG_CONFIG_HOME=/etc/cfg
+COPY --chmod=644 --chown=nonroot:nonroot ./default-config.toml /etc/cfg/config.toml
+VOLUME ["/etc/cfg"]
 
 # Bring in the actual binary we will run
 COPY --from=distroless --chmod=544 --chown=nonroot:nonroot /artifacts/$TARGETPLATFORM/identity-server /opt/identity-server
+
+EXPOSE 8443/tcp
+EXPOSE 8443/udp
+
+ENV RUST_BACKTRACE=1
 ENTRYPOINT ["/opt/identity-server"]
-VOLUME ["/var/db"]
-WORKDIR ["/var/db"]
-
-EXPOSE 443/tcp
-EXPOSE 80/tcp
-
+CMD ["serve", "--config", "/etc/cfg/config.toml"]

@@ -6,7 +6,7 @@ use std::{path::PathBuf, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
-pub const DEFAULT_CONFIG_CONTENTS: &str = include_str!("../default_config.toml");
+pub const DEFAULT_CONFIG_CONTENTS: &str = include_str!("../default-config.toml");
 const CACHE_DIR_SUFFIX: &str = "nexus_identity_server";
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
@@ -54,6 +54,17 @@ pub struct HttpConfig {
 	pub tls: TlsConfig,
 }
 
+impl HttpConfig {
+	fn validate(&self) -> Result<(), ValidationError> {
+		if let TlsConfig::Acme { ref domains, .. } = self.tls {
+			if domains.is_empty() {
+				return Err(ValidationError::UnspecifiedDomain);
+			}
+		}
+		Ok(())
+	}
+}
+
 impl Default for HttpConfig {
 	fn default() -> Self {
 		Self {
@@ -65,7 +76,7 @@ impl Default for HttpConfig {
 
 impl HttpConfig {
 	const fn default_port() -> u16 {
-		443
+		8443
 	}
 }
 
@@ -131,10 +142,18 @@ fn default_some<T: Default>() -> Option<T> {
 	Some(T::default())
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum ConfigError {
-	#[error("error in toml file: {0}")]
+	#[error("error deserializing toml file: {0}")]
 	Toml(#[from] toml::de::Error),
+	#[error("config file was invalid: {0}")]
+	FailedValidation(#[from] ValidationError),
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+pub enum ValidationError {
+	#[error("when using ACME tls, you *must* specify at least one domain")]
+	UnspecifiedDomain,
 }
 
 /// The contents of the config file. Contains all settings customizeable during
@@ -150,6 +169,14 @@ pub struct Config {
 	pub cache: CacheSettings,
 	#[serde(default)]
 	pub third_party: ThirdPartySettings,
+}
+
+impl Config {
+	/// Validates the deserialized config
+	pub fn validate(&self) -> Result<(), ValidationError> {
+		self.http.validate()?;
+		Ok(())
+	}
 }
 
 impl FromStr for Config {
@@ -173,7 +200,7 @@ mod test {
 				db_file: PathBuf::from("./identities.db"),
 			},
 			http: HttpConfig {
-				port: 443,
+				port: 8443,
 				tls: TlsConfig::Acme {
 					email: String::new(),
 					domains: Vec::new(),
@@ -197,10 +224,14 @@ mod test {
 	}
 
 	#[test]
-	fn test_default_config_deserializes_correctly() {
+	fn test_default_config_deserializes_correctly_but_fails_validation() {
 		let deserialized: Config = toml::from_str(DEFAULT_CONFIG_CONTENTS)
 			.expect("default config file should always deserialize");
 		assert_eq!(deserialized, Config::default());
+		assert_eq!(
+			deserialized.validate(),
+			Err(ValidationError::UnspecifiedDomain)
+		)
 	}
 
 	#[test]

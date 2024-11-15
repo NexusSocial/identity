@@ -18,7 +18,7 @@ jobs:
         uses: actions/download-artifact@v4.1.8
         with:
           name: rust
-          path: artifacts
+          path: ./identity-server/artifacts
 
       - name: Build Image
         id: build-image
@@ -28,6 +28,7 @@ jobs:
           tags: commit-${{ github.sha }} ${{ inputs.additional-tags }}
           platforms: linux/arm64,linux/amd64,windows/amd64
           oci: true
+          context: ./identity-server
           containerfiles: |
             ./identity-server/Dockerfile
 

@@ -3,16 +3,16 @@
 # Note: When using TLS, we will always send the HSTS header to force clients to only
 # use https urls.
 [http]
-port = 443 # also supports 0 to mean random
+port = 8443 # also supports 0 to mean random
 
 # Settings related to configuring TLS certificates. In most cases, the "acme" type is
 # the simplest to set up.
 [http.tls]
-type = "acme" # requires publicly visible port to be 443, otherwise the challenge fails
+type = "acme" # publicly visible port MUST be 443, otherwise the challenge fails
 domains = [] # You must fill this in with your public domain name(s).
+# domains = ["socialvr.net", "socialvr.net:1337", "10.11.12.13"]
 is_prod = true # we are using LetsEncrypt's main, production directory.
 email = "" # optional: you can fill in your email address here
-# domains = ["socialvr.net", "socialvr.net:1337", "10.11.12.13"]
 
 # [http.tls]
 # type = "disable" # disables TLS and everything will use HTTP instead.
