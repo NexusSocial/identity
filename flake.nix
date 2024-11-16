@@ -18,17 +18,17 @@
 
     fenix = {
       url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixos-24_05";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
   };
 
-  outputs = raw-inputs@{ flake-utils, ... }:
+  outputs = inputs-raw@{ flake-utils, ... }:
     let
       # All systems we may care about evaluating nixpkgs for
       systems = with flake-utils.lib.system; [ x86_64-linux aarch64-linux aarch64-darwin x86_64-darwin ];
       perSystem = (system: rec {
-        inputs = ./nix/inputs.nix { inherit raw-inputs system; };
-        pkgs = import raw-inputs.nixpkgs-unstable {
+        inputs = import ./nix/inputs.nix { inherit inputs-raw system; };
+        pkgs = import inputs.nixpkgs-unstable {
           inherit system;
           overlays = [
             ((import nix/overlays/nixpkgs-unstable.nix) { inherit inputs; })
@@ -48,6 +48,11 @@
           inherit (s.${system}) pkgs inputs;
         in
         {
+          devShells = import ./nix/devShells.nix { inherit system pkgs inputs; };
+          nixosConfigurations = import ./nix/nixos/nixosConfigurations.nix
+            {
+              inherit s;
+            };
           formatter = pkgs.nixpkgs-fmt;
         }
       );
