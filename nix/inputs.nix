@@ -10,4 +10,5 @@ in
   # fenix = if isDarwin then inputs-raw.fenix-darwin else inputs-raw.fenix-linux;
   fenix = inputs-raw.fenix;
   nixos-generators = inputs-raw.nixos-generators;
+  home-manager = inputs-raw.home-manager;
 }

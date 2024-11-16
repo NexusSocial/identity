@@ -1,19 +1,21 @@
 # Defines all nixosConfigurations for the flake
 { s }:
 let
-  inherit (s."x86_64-linux") pkgs inputs;
-
   nixosConfig =
     { hostname
     , username
+    , system
     , nixosConfigFile
     , homeConfigFile
     }:
+    let
+      inherit (s.${system}) pkgs inputs;
+    in
     inputs.nixpkgs.lib.nixosSystem
       rec {
         inherit system;
         specialArgs = {
-          inherit hostname username pkgs; modulesPath = "${inputs.nixpkgs}/nixos/modules";
+          inherit inputs hostname username pkgs; modulesPath = "${inputs.nixpkgs}/nixos/modules";
         };
         modules = [
           nixosConfigFile
@@ -40,6 +42,7 @@ in
     {
       hostname = "servers-us-east-1";
       username = "admin";
+      system = "x86_64-linux";
       nixosConfigFile = ./servers-us-east-1/configuration.nix;
       homeConfigFile = ./home.nix;
     };
