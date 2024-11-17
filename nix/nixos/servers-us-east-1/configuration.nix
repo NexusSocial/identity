@@ -9,27 +9,41 @@
 , ...
 }: {
   # You can import other NixOS modules here
-  imports = [
-  ];
+  imports = [ ];
 
-  nixpkgs = {
-    # You can add overlays here
-    overlays = [
-      # If you want to use overlays exported from other flakes:
-      # neovim-nightly-overlay.overlays.default
+  # BEGIN Recommendations from the linode article
+  boot.loader.grub.forceInstall = true;
+  boot.loader.grub.device = "nodev";
+  boot.loader.timeout = 10;
 
-      # Or define it inline, for example:
-      # (final: prev: {
-      #   hi = final.hello.overrideAttrs (oldAttrs: {
-      #     patches = [ ./change-hello-to-hi.patch ];
-      #   });
-      # })
-    ];
-    # Configure your nixpkgs instance
-    config = {
-      # Disable if you don't want unfree packages
-      # allowUnfree = true;
+  # Enables linode's LISH support
+  boot.kernelParams = [ "console=ttyS0,19200n8" ];
+  boot.loader.grub.extraConfig = ''
+    serial --speed=19200 --unit=0 --word=8 --parity=no --stop=1;
+    terminal_input serial;
+    terminal_output serial
+  '';
+
+  networking = {
+    usePredictableInterfaceNames = false;
+    useDHCP = false; # Disable DHCP globally as we will not need it.
+    # required for ssh?
+    interfaces.eth0.useDHCP = true;
+  };
+
+  fileSystems."/" =
+    {
+      device = "/dev/sda";
+      fsType = "ext4";
     };
+
+  swapDevices =
+    [{ device = "/dev/sdb"; }];
+  # END 
+
+  nixpkgs.flake = {
+    setFlakeRegistry = true;
+    setNixPath = true;
   };
 
   nix =
@@ -53,36 +67,26 @@
       nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
     };
 
-  # FIXME: Add the rest of your current configuration
-
-  # TODO: Set your hostname
   networking.hostName = hostname;
 
-  # TODO: Configure your system-wide user settings (groups, etc), add more users as needed.
   users.groups = {
     plugdev = { };
   };
   users.users = {
     ${username} = {
-      # TODO: You can set an initial password for your user.
-      # If you do, you can skip setting a root password by passing '--no-root-passwd' to nixos-install.
-      # Be sure to change it (using passwd) after rebooting!
-
       isNormalUser = true;
       openssh.authorizedKeys.keys = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBLmHbuCMFpOKYvzMOpTOF+iMX9rrY6Y0naarcbWUV8G ryan@ryan-laptop.local"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBLmHbuCMFpOKYvzMOpTOF+iMX9rrY6Y0naarcbWUV8G ryan@ryan-laptop"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL6iX+gVgpmt5qj+VPTtk/SlAjlZTOXH2Ysdao0MLfNS ci@NexusSocial/identity"
       ];
       # TODO: Be sure to add any other groups you need (such as networkmanager, audio, docker, etc)
       extraGroups = [
-        "networkmanager"
         "wheel"
-        "plugdev"
-        "dialout"
       ];
     };
   };
   users.mutableUsers = false;
-  security.sudo.wheelNeedsPassword = false;
+  security.sudo.wheelNeedsPassword = false; # TODO: Change to true once satisfied with config
 
   # This setups a SSH server. Very important if you're setting up a headless system.
   # Feel free to remove if you don't need it.
@@ -97,6 +101,18 @@
     };
   };
 
+
+  environment.systemPackages = with pkgs; [
+    neovim
+    ripgrep
+
+    # Recommended by https://www.linode.com/docs/guides/install-nixos-on-linode/#install-diagnostic-tools
+    inetutils
+    mtr
+    sysstat
+
+  ];
+
   # https://nixos.wiki/wiki/FAQ/When_do_I_update_stateVersion
-  system.stateVersion = "23.05";
+  system.stateVersion = "24.05";
 }

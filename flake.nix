@@ -24,6 +24,12 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+
+    # For accessing `deploy-rs`'s utility Nix functions
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs = inputs-raw@{ flake-utils, ... }:
@@ -42,10 +48,10 @@
           };
         };
       });
-      # This helper variable caches each system we care about in one spot
+      # This `s` helper variable caches each system we care about in one spot
       inherit (flake-utils.lib.eachSystem systems (system: { s = perSystem system; })) s;
     in
-    # Now we can proceed with the "typical" way of doing flakes via flake-utils:
+    # System-specific stuff goes in here, by using the flake-utils helper functions
     flake-utils.lib.eachSystem systems
       (system:
         let
@@ -53,12 +59,18 @@
         in
         {
           devShells = import ./nix/devShells.nix { inherit system pkgs inputs; };
+          packages = {
+            deploy-rs = inputs.deploy-rs.packages.${system}.deploy-rs;
+          };
           formatter = pkgs.nixpkgs-fmt;
         }
-      ) // {
-      nixosConfigurations = import ./nix/nixos/nixosConfigurations.nix
-        {
-          inherit s;
-        };
+      )
+    # Next, concatenate deploy-rs stuff to the flake
+    // import ./nix/deploy-rs.nix {
+      inputs = s."x86_64-linux".inputs;
+    }
+    # Concatenate NixOS stuff
+    // {
+      nixosConfigurations = import ./nix/nixos/nixosConfigurations.nix { inherit s; };
     };
 }

@@ -11,4 +11,5 @@ in
   fenix = inputs-raw.fenix;
   nixos-generators = inputs-raw.nixos-generators;
   home-manager = inputs-raw.home-manager;
+  deploy-rs = inputs-raw.deploy-rs;
 }
