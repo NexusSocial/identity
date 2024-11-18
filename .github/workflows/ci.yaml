@@ -45,6 +45,13 @@ jobs:
     with:
       cargo-profile: ${{ needs.check-inputs.outputs.cargo-profile }}
 
+  nix:
+    name: Nix
+    needs: check-inputs
+    uses: ./.github/workflows/nix.yaml
+    with:
+      deploy: ${{ needs.check-inputs.outputs.is-default-branch == 'true' }}
+
   container:
     name: Container
     needs: [rust, check-inputs]

@@ -1,15 +1,22 @@
+# Editor stuff
 /.idea
 /.vscode
+*.swp
+
+# Build artifacts
 /target
 **/artifacts
 .intentionally-empty-file.o
 
-*.swp
+# Macos BS
 .DS_Store
 
-# For local development
+# Nix stuff
 .direnv
 .envrc
+result
+
+# For local development
 my-config.toml
 
 # SQLite

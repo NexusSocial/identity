@@ -1,0 +1,36 @@
+name: Nix CI
+on:
+  workflow_call:
+    inputs:
+      deploy:
+        required: true
+        type: boolean
+
+jobs:
+  fmt:
+    name: Check Nix Formatting
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: cachix/install-nix-action@v30
+    - uses: cachix/cachix-action@v15
+      with:
+        name: nexus-ci
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - run: nix develop -c nixpkgs-fmt --check .
+
+  build:
+    name: Build NixOS config
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: cachix/install-nix-action@v30
+    - uses: cachix/cachix-action@v15
+      with:
+        name: nexus-ci
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - name: Build NixOS machines
+      run: |
+        nix build .#nixosConfigurations.servers-us-east-1.config.formats.linode
+    - name: Run Flake Checks
+      run: nix flake check
