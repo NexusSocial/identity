@@ -8,6 +8,9 @@
       };
     };
     sshUser = "admin";
+    sshOpts = [ "-o" "StrictHostKeyChecking=no" ];
+
+
 
     # Timeout for profile activation.
     activationTimeout = 240;

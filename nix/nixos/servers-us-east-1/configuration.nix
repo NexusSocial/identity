@@ -26,7 +26,7 @@
 
   networking = {
     usePredictableInterfaceNames = false;
-    useDHCP = false; # Disable DHCP globally as we will not need it.
+    useDHCP = lib.mkForce false; # Disable DHCP globally as we will not need it.
     # required for ssh?
     interfaces.eth0.useDHCP = true;
   };
@@ -51,20 +51,19 @@
       flakeInputs = lib.filterAttrs (_: lib.isType "flake") inputs;
     in
     {
+      package = pkgs.nix;
       settings = {
         # Enable flakes and new 'nix' command
         experimental-features = "nix-command flakes";
-        # Opinionated: disable global registry
-        flake-registry = "";
-        # Workaround for https://github.com/NixOS/nix/issues/9574
-        nix-path = config.nix.nixPath;
+        trusted-users = [
+          "root"
+          "@admin"
+          username
+        ];
       };
+      nixPath = lib.mkForce [ "nixpkgs=flake:nixpkgs" ];
       # Opinionated: disable channels
       channel.enable = false;
-
-      # Opinionated: make flake registry and nix path match flake inputs
-      registry = lib.mapAttrs (_: flake: { inherit flake; }) flakeInputs;
-      nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
     };
 
   networking.hostName = hostname;

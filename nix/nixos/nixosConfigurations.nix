@@ -11,11 +11,11 @@ let
     let
       inherit (s.${system}) pkgs inputs;
     in
-    inputs.nixpkgs-unstable.lib.nixosSystem
+    inputs.nixpkgs.lib.nixosSystem
       rec {
         inherit system;
         specialArgs = {
-          inherit inputs hostname username pkgs; modulesPath = "${inputs.nixpkgs-unstable}/nixos/modules";
+          inherit inputs hostname username pkgs; modulesPath = "${inputs.nixpkgs}/nixos/modules";
         };
         modules = [
           # See https://github.com/nix-community/nixos-generators/blob/06ffce1a/README.md#using-as-a-nixos-module
@@ -24,7 +24,7 @@ let
 
             formatConfigs.linode = { config, ... }: {
               # set disk size to to 20G
-              virtualisation.diskSize = 1 * 1024;
+              # virtualisation.diskSize = 1 * 1024;
             };
 
 
