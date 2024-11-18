@@ -8,12 +8,12 @@
     nixos-24_05.url = "github:NixOS/nixpkgs/nixos-24.05";
     nixos-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixos-generators = {
-      url = "github:nix-community/nixos-generators";
-      inputs.nixpkgs.follows = "nixos-unstable";
+      url = "github:nix-community/nixos-generators/7c60ba4bc8d6aa2ba3e5b0f6ceb9fc07bc261565";
+      inputs.nixpkgs.follows = "nixos-24_05";
     };
     home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixos-unstable";
+      url = "github:nix-community/home-manager/release-24.05";
+      inputs.nixpkgs.follows = "nixos-24_05";
     };
 
     #Darwin

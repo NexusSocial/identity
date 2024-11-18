@@ -49,6 +49,7 @@ jobs:
     name: Nix
     needs: check-inputs
     uses: ./.github/workflows/nix.yaml
+    secrets: inherit
     with:
       deploy: ${{ needs.check-inputs.outputs.is-default-branch == 'true' }}
 
