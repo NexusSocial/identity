@@ -70,9 +70,11 @@
 
   users.groups = {
     plugdev = { };
+    ${username} = { };
   };
   users.users = {
     ${username} = {
+      group = username;
       isNormalUser = true;
       openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBLmHbuCMFpOKYvzMOpTOF+iMX9rrY6Y0naarcbWUV8G ryan@ryan-laptop"

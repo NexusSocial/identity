@@ -1,0 +1,36 @@
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+  labels:
+    app: hello-world
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:stable
+        ports:
+        - containerPort: 80
+---
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world
+spec:
+  type: NodePort
+  selector:
+    app: hello-world
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080

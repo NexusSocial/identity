@@ -30,6 +30,31 @@
   programs.home-manager.enable = true;
   programs.git.enable = true;
 
+  # shell stuff
+  programs.zsh = {
+    enable = true;
+    autosuggestion.enable = true;
+    enableCompletion = true;
+    oh-my-zsh.enable = true;
+    initExtra = ''
+      set -o vi
+    '';
+    envExtra = ''
+    '';
+  };
+
+  xdg.enable = true;
+  xdg.configFile = {
+    "nvim" = {
+      source = pkgs.fetchFromGitHub {
+        owner = "thebutlah";
+        repo = "init.lua";
+        rev = "5dd312fe5f06e6301baa55f7cf0c70296b03c25f";
+        hash = "sha256-GR03IkfAHUlVeM1QOlPKDRPw0HboJZ+AcJsQ5ORcAE8=";
+      };
+    };
+  };
+
   # Nicely reload system units when changing configs
   systemd.user.startServices = "sd-switch";
 
