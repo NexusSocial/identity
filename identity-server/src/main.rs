@@ -1,4 +1,7 @@
-use std::{io::IsTerminal as _, path::PathBuf};
+use std::{
+	io::IsTerminal as _,
+	path::{Path, PathBuf},
+};
 
 use clap::Parser as _;
 use color_eyre::{
@@ -20,6 +23,27 @@ use identity_server::{
 };
 
 const GOOGLE_CLIENT_ID_DOCS_URL: &str = "https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#get_your_google_api_client_id";
+
+async fn load_config(cfg_path: &Path) -> Result<Config> {
+	tokio::fs::read_to_string(cfg_path)
+		.await
+		.wrap_err("failed to read config file")
+		.inspect(|cfg| debug!(contents = cfg, "config file contents"))
+		.and_then(|cfg| cfg.parse().wrap_err("failed to parse config file"))
+		.and_then(|cfg: Config| {
+			cfg.validate().map(|()| cfg).or_else(|err| {
+				let suggestion = match err {
+					ValidationError::UnspecifiedDomain => {
+						"try adding your domain in the `http.tls.domains` list"
+					}
+				};
+				Err(err)
+					.wrap_err("config file was invalid")
+					.suggestion(suggestion)
+			})
+		})
+		.with_note(|| format!("Config file path: {}", cfg_path.display()))
+}
 
 #[derive(clap::Parser, Debug)]
 #[clap(version)]
@@ -44,26 +68,7 @@ struct ServeArgs {
 impl ServeArgs {
 	async fn run(self) -> Result<()> {
 		let cli = self;
-
-		let config_file = tokio::fs::read_to_string(&cli.config)
-			.await
-			.wrap_err("failed to read config file")
-			.with_note(|| format!("Config file path: {}", cli.config.display()))?;
-		debug!(contents = config_file, "config file contents");
-		let config_file: Config =
-			config_file.parse().wrap_err("config file was invalid")?;
-
-		let validation_result = config_file.validate();
-		if let Err(ref err) = validation_result {
-			let suggestion = match err {
-				ValidationError::UnspecifiedDomain => {
-					"try adding your domain in the `http.tls.domains` list"
-				}
-			};
-			validation_result
-				.wrap_err("config file was invalid")
-				.suggestion(suggestion)?;
-		}
+		let config_file = load_config(&cli.config).await?;
 
 		let db_pool = {
 			let DatabaseConfig::Sqlite { ref db_file } = config_file.database;
