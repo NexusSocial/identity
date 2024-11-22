@@ -47,7 +47,7 @@ jobs:
 
   nix:
     name: Nix
-    needs: check-inputs
+    needs: [check-inputs, container] # because we want the latest container
     uses: ./.github/workflows/nix.yaml
     secrets: inherit
     with:
