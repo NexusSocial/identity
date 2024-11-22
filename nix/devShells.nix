@@ -15,7 +15,9 @@ in
     # These programs be available to the dev shell
     buildInputs = (with pkgs; [
       nixpkgs-fmt
-    ]) ++ [
+    ]) ++ pkgs.lib.optional pkgs.stdenv.isDarwin [
+      pkgs.libiconv
+    ] ++ [
       rustToolchain
       rustPlatform.bindgenHook
       # fenix.packages.${system}.rust-analyzer
@@ -23,7 +25,6 @@ in
 
     # Hook the shell to set custom env vars
     shellHook = ''
-      # FOOBAR=1
     '';
   };
 }
