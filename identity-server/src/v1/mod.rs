@@ -16,7 +16,7 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::{
-	handle::{Handle, InvalidHandle, Lowercase},
+	handle::{Handle, InvalidHandle},
 	uuid::UuidProvider,
 	MigratedDbPool,
 };
@@ -85,7 +85,7 @@ async fn create(
 	handle: Path<String>,
 	pubkey: Json<Jwk>,
 ) -> Result<Redirect, CreateErr> {
-	let handle: Handle<String> = Lowercase(handle.to_lowercase()).try_into()?;
+	let handle: Handle = handle.parse()?;
 
 	// TODO: protect against reserved handles, but only when the handle is on our
 	// own domain
@@ -100,7 +100,7 @@ async fn create(
 		"INSERT INTO users (user_id, handle, pubkeys_jwks) VALUES ($1, $2, $3)",
 	)
 	.bind(uuid)
-	.bind(handle.as_ref())
+	.bind(handle.as_str())
 	.bind(serialized_jwks)
 	.execute(&state.db_pool.0)
 	.await
