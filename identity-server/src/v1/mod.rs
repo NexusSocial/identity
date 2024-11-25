@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use axum::{
-	extract::{NestedPath, Path, State},
+	extract::{Path, State},
 	http::StatusCode,
 	response::{IntoResponse, Redirect},
 	routing::{get, post},
@@ -15,7 +15,11 @@ use jose_jwk::{Jwk, JwkSet};
 use tracing::error;
 use uuid::Uuid;
 
-use crate::{uuid::UuidProvider, MigratedDbPool};
+use crate::{
+	handle::{Handle, InvalidHandle},
+	uuid::UuidProvider,
+	MigratedDbPool,
+};
 
 #[derive(Debug, Clone)]
 struct RouterState {
@@ -46,14 +50,30 @@ impl RouterConfig {
 enum CreateErr {
 	#[error(transparent)]
 	Internal(#[from] color_eyre::Report),
+	#[error("invalidy handle: {0}")]
+	InvalidHandle(#[from] InvalidHandle),
+	#[error("that handle is already taken")]
+	HandleTaken,
+	#[expect(dead_code)]
+	#[error("that handle is reserved")]
+	HandleReserved,
 }
 
 impl IntoResponse for CreateErr {
 	fn into_response(self) -> axum::response::Response {
 		error!("{self:?}");
 		match self {
-			Self::Internal(err) => {
-				(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()).into_response()
+			Self::Internal(_) => {
+				(StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
+			}
+			Self::InvalidHandle(_) => {
+				(StatusCode::BAD_REQUEST, self.to_string()).into_response()
+			}
+			Self::HandleTaken => {
+				(StatusCode::FORBIDDEN, self.to_string()).into_response()
+			}
+			Self::HandleReserved => {
+				(StatusCode::FORBIDDEN, self.to_string()).into_response()
 			}
 		}
 	}
@@ -62,25 +82,33 @@ impl IntoResponse for CreateErr {
 #[tracing::instrument(skip_all)]
 async fn create(
 	state: State<RouterState>,
-	nested_path: NestedPath,
+	handle: Path<String>,
 	pubkey: Json<Jwk>,
 ) -> Result<Redirect, CreateErr> {
+	let handle: Handle = handle.parse()?;
+
+	// TODO: protect against reserved handles, but only when the handle is on our
+	// own domain
+
 	let uuid = state.uuid_provider.next_v4();
 	let jwks = JwkSet {
 		keys: vec![pubkey.0],
 	};
 	let serialized_jwks = serde_json::to_string(&jwks).expect("infallible");
 
-	sqlx::query("INSERT INTO users (user_id, pubkeys_jwks) VALUES ($1, $2)")
-		.bind(uuid)
-		.bind(serialized_jwks)
-		.execute(&state.db_pool.0)
-		.await
-		.wrap_err("failed to insert identity into db")?;
+	sqlx::query(
+		"INSERT INTO users (user_id, handle, pubkeys_jwks) VALUES ($1, $2, $3)",
+	)
+	.bind(uuid)
+	.bind(handle.as_str())
+	.bind(serialized_jwks)
+	.execute(&state.db_pool.0)
+	.await
+	.inspect_err(|err| error!(?err, "error while inserting new account into DB"))
+	.map_err(|_| CreateErr::HandleTaken)?;
 
 	Ok(Redirect::to(&format!(
-		"{}/users/{}/did.json",
-		nested_path.as_str(),
+		"/users/{}/did.json",
 		uuid.as_hyphenated()
 	)))
 }

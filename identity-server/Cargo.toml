@@ -10,34 +10,37 @@ publish = false
 
 [dependencies]
 arc-swap.workspace = true
+ascii.workspace = true
 axum = { workspace = true, features = [] }
 axum-extra = { workspace = true, features = ["cookie"] }
 axum-macros.workspace = true
 axum-server = { workspace = true, features = ["tls-rustls-no-provider"] }
 clap = { workspace = true, features = ["derive", "env", "color"] }
 color-eyre.workspace = true
-derive_more = { workspace = true, features = ["debug"] }
+derive_more = { workspace = true, features = ["debug", "deref", "deref_mut"] }
 did-simple.workspace = true
 futures.workspace = true
 header-parsing.workspace = true
 http-body-util.workspace = true
+idna = "1.0.3"
 jose-jwk = { workspace = true, default-features = false }
 jsonwebtoken = { version = "9.3.0", default-features = false }
 rand.workspace = true
 reqwest = { workspace = true, features = ["rustls-tls"] }
+rustix = { version = "0.38.37", features = ["process"] }
 rustls-acme = { workspace = true, default-features = false, features = ["ring", "axum"] }
 serde.workspace = true
 serde_json.workspace = true
-sqlx = { version = "0.8.2", features = ["runtime-tokio", "tls-rustls", "sqlite", "uuid", "migrate"] }
 sqlformat = "=0.2.6" # TODO: Remove once they fix breakage
+sqlx = { version = "0.8.2", features = ["runtime-tokio", "tls-rustls", "sqlite", "uuid", "migrate"] }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 toml.workspace = true
 tower-http = { workspace = true, features = ["trace", "fs"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing.workspace = true
+url.workspace = true
 uuid = { workspace = true, features = ["std", "v4", "serde"] }
-rustix = { version = "0.38.37", features = ["process"] }
 
 [dev-dependencies]
 base64.workspace = true
