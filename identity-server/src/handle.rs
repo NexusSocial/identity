@@ -2,11 +2,6 @@ use std::str::FromStr;
 
 use ascii::{AsciiStr, AsciiString};
 
-#[allow(unused)]
-const MAX_LENGTH: u8 = 253;
-#[allow(unused)]
-const MAX_SEGMENT_LENGTH: u8 = 63;
-
 /// Any ascii-lowercase string
 #[derive(Debug, Eq, PartialEq, Clone, derive_more::Deref, derive_more::DerefMut)]
 pub struct LowercaseAscii(AsciiString);
@@ -53,7 +48,7 @@ impl AsRef<[u8]> for LowercaseAscii {
 }
 
 /// These requirements come directly from ATProto:
-/// https://atproto.com/specs/handle#handle-identifier-syntax
+/// <https://atproto.com/specs/handle#handle-identifier-syntax>
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum InvalidHandle {
 	#[error("failed idna conversion")]
@@ -67,7 +62,7 @@ pub enum InvalidHandle {
 }
 
 /// Precondition: tld is lower case
-/// See https://atproto.com/specs/handle#additional-non-syntax-restrictions
+/// See <https://atproto.com/specs/handle#additional-non-syntax-restrictions>
 fn is_reserved_tld(tld: &AsciiStr) -> bool {
 	debug_assert_eq!(tld, tld.to_ascii_lowercase(), "check precondition");
 	[
@@ -128,6 +123,9 @@ impl FromStr for Handle {
 #[cfg(test)]
 mod test {
 	use super::*;
+
+	const MAX_LENGTH: u8 = 253;
+	const MAX_SEGMENT_LENGTH: u8 = 63;
 
 	#[test]
 	fn happy_cases() {

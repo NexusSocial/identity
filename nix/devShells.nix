@@ -15,6 +15,7 @@ in
     # These programs be available to the dev shell
     buildInputs = (with pkgs; [
       nixpkgs-fmt
+      cargo-deny
     ]) ++ pkgs.lib.optional pkgs.stdenv.isDarwin [
       pkgs.libiconv
     ] ++ [
