@@ -1,12 +1,11 @@
 use std::str::FromStr;
 
-use ascii::{AsciiChar, AsciiStr, AsciiString};
+use ascii::{AsciiStr, AsciiString};
 
+#[allow(unused)]
 const MAX_LENGTH: u8 = 253;
-const MIN_SEGMENT_LENGTH: u8 = 1;
+#[allow(unused)]
 const MAX_SEGMENT_LENGTH: u8 = 63;
-
-const EMPTY_ASCII: &AsciiString = &AsciiString::new();
 
 /// Any ascii-lowercase string
 #[derive(Debug, Eq, PartialEq, Clone, derive_more::Deref, derive_more::DerefMut)]
@@ -57,37 +56,18 @@ impl AsRef<[u8]> for LowercaseAscii {
 /// https://atproto.com/specs/handle#handle-identifier-syntax
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum InvalidHandle {
-	#[error("the handle must be no longer than {MAX_LENGTH} characters")]
-	TooLong,
-	#[error("the handle does not have at least two . separated segments")]
-	NotEnoughSegments,
-	#[error(
-		"one of the handle's segments was shorter than {MIN_SEGMENT_LENGTH} characters"
-	)]
-	SegmentTooShort,
-	#[error(
-		"one of the handle's segments was longer than {MAX_SEGMENT_LENGTH} characters"
-	)]
-	SegmentTooLong,
+	#[error("failed idna conversion")]
+	NotADomain,
 
-	#[error("the handle cannot start with a dot")]
-	StartingDot,
-	#[error("the handle cannot end with a dot")]
-	EndingDot,
-	#[error("the handle cannot start with a dot")]
-	StartingHyphen,
-	#[error("the handle cannot end with a dot")]
-	EndingHyphen,
+	#[error("missing or invalid top-level domain")]
+	TldInvalid,
 
-	#[error("the only allowed characters are letters, digits, and hyphens, {0} is not allowed")]
-	InvalidCharacter(char),
-	#[error("the last segment (the TLD) cannot start with a digit")]
-	TldStartsWithDigit,
-	#[error("the last segment (the TLD) is disallowed")]
-	TldDisallowed,
+	#[error("tld is reserved")]
+	TldReserved,
 }
 
 /// Precondition: tld is lower case
+/// See https://atproto.com/specs/handle#additional-non-syntax-restrictions
 fn is_reserved_tld(tld: &AsciiStr) -> bool {
 	debug_assert_eq!(tld, tld.to_ascii_lowercase(), "check precondition");
 	[
@@ -99,6 +79,7 @@ fn is_reserved_tld(tld: &AsciiStr) -> bool {
 		"local",
 		"localhost",
 		"onion",
+		"test",
 	]
 	.into_iter()
 	.any(|banned| banned == tld)
@@ -119,86 +100,28 @@ impl AsRef<[u8]> for Handle {
 	}
 }
 
-impl TryFrom<LowercaseAscii> for Handle {
-	type Error = InvalidHandle;
-
-	fn try_from(s: LowercaseAscii) -> Result<Self, Self::Error> {
-		if s.len() > MAX_LENGTH.into() {
-			return Err(InvalidHandle::TooLong);
-		}
-		if s.len() == 0 {
-			return Err(InvalidHandle::NotEnoughSegments);
-		}
-
-		// Wont panic because we already checked that it is a valid hostname, which means ascii.
-		let first_char = s[0];
-		let last_char = s.last().expect("already confirmed non-zero length");
-		if first_char == b'.' {
-			return Err(InvalidHandle::StartingDot);
-		};
-		if first_char == b'-' {
-			return Err(InvalidHandle::StartingHyphen);
-		}
-		if last_char == b'.' {
-			return Err(InvalidHandle::EndingDot);
-		};
-		if last_char == b'-' {
-			return Err(InvalidHandle::EndingHyphen);
-		}
-
-		let mut segment_count = 0;
-		let mut last_segment = EMPTY_ASCII.as_ref();
-		for segment in s.split(AsciiChar::Dot) {
-			segment_count += 1;
-			last_segment = segment;
-			if segment.len() > MAX_SEGMENT_LENGTH.into() {
-				return Err(InvalidHandle::SegmentTooLong);
-			}
-			if segment.len() < MIN_SEGMENT_LENGTH.into() {
-				return Err(InvalidHandle::SegmentTooShort);
-			}
-
-			for char in segment {
-				if !char.is_ascii_alphanumeric() && *char != AsciiChar::Minus {
-					return Err(InvalidHandle::InvalidCharacter(char.as_char()));
-				}
-			}
-		}
-
-		if segment_count < 2 {
-			return Err(InvalidHandle::NotEnoughSegments);
-		}
-		if is_reserved_tld(&last_segment) {
-			return Err(InvalidHandle::TldDisallowed);
-		}
-		if last_segment.as_bytes()[0].is_ascii_digit() {
-			return Err(InvalidHandle::TldStartsWithDigit);
-		}
-
-		Ok(Self(s))
-	}
-}
-
 impl FromStr for Handle {
 	type Err = InvalidHandle;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let ascii = AsciiString::from_ascii(s).map_err(|err| {
-			debug_assert_ne!(
-				s.len(),
-				0,
-				"sanity check: an empty string would have been ascii"
-			);
-			let invalid_char = s
-				.split_at(err.ascii_error().valid_up_to())
-				.1
-				.chars()
-				.next()
-				.unwrap();
-			InvalidHandle::InvalidCharacter(invalid_char)
-		})?;
-		let lower = LowercaseAscii::from(ascii);
-		Self::try_from(lower)
+		// PERF: This could use unsafe and be faster
+		let ascii = AsciiString::from_ascii(
+			idna::domain_to_ascii_strict(s).map_err(|_| InvalidHandle::NotADomain)?,
+		)
+		.unwrap();
+		let Some(tld_idx) = ascii.as_str().rfind('.') else {
+			return Err(InvalidHandle::TldInvalid);
+		};
+		if ascii[tld_idx + 1].is_ascii_digit() {
+			return Err(InvalidHandle::TldInvalid);
+		}
+		let tld = &ascii[tld_idx + 1..];
+		if is_reserved_tld(tld) {
+			return Err(InvalidHandle::TldReserved);
+		}
+
+		debug_assert_eq!(ascii, ascii.to_ascii_lowercase());
+		Ok(Self(LowercaseAscii(ascii)))
 	}
 }
 
@@ -212,17 +135,28 @@ mod test {
 			"foobar.example.com",
 			"bow.ties.are.cool",
 			"u.wu",
-			"Bingus.Bongus.gov",
-			"i-have-.some-hyphens.com",
+			"i-have.some-hyphens.com",
 			"l33t.h4x0r.com",
-			//"苹果.com",
 		] {
-			let ascii = AsciiStr::from_ascii(h).unwrap();
+			let ascii = AsciiString::from_ascii(h).unwrap();
 			assert_eq!(
 				h.parse::<Handle>(),
 				Ok(Handle(LowercaseAscii::from(ascii))),
 				"{h} failed",
 			)
+		}
+	}
+
+	#[test]
+	fn upper_case_normalizes_to_lower_case() {
+		for h in ["Bingus.Bongus.gov", "bInGuS.BOnGuS"] {
+			assert_eq!(
+				h.parse::<Handle>(),
+				Ok(Handle(LowercaseAscii(
+					h.to_ascii_lowercase().parse().unwrap()
+				))),
+				"{h} failed",
+			);
 		}
 	}
 
@@ -236,7 +170,7 @@ mod test {
 		] {
 			assert_eq!(
 				h.parse::<Handle>(),
-				Err(InvalidHandle::InvalidCharacter('_')),
+				Err(InvalidHandle::NotADomain),
 				"{h} failed",
 			)
 		}
@@ -253,15 +187,12 @@ mod test {
 			"maximum possible length works"
 		);
 		s.push('a');
-		assert_eq!(s.parse::<Handle>(), Err(InvalidHandle::TooLong));
+		assert_eq!(s.parse::<Handle>(), Err(InvalidHandle::NotADomain));
 	}
 
 	#[test]
 	fn reject_too_few_segments() {
-		assert_eq!(
-			"foobar".parse::<Handle>(),
-			Err(InvalidHandle::NotEnoughSegments)
-		);
+		assert_eq!("foobar".parse::<Handle>(), Err(InvalidHandle::TldInvalid));
 	}
 
 	#[test]
@@ -273,12 +204,9 @@ mod test {
 			Ok(Handle(LowercaseAscii(s.parse().unwrap())))
 		);
 		s.push('a');
-		assert_eq!(s.parse::<Handle>(), Err(InvalidHandle::SegmentTooLong));
+		assert_eq!(s.parse::<Handle>(), Err(InvalidHandle::NotADomain));
 
-		assert_eq!(
-			"a..b".parse::<Handle>(),
-			Err(InvalidHandle::SegmentTooShort)
-		);
+		assert_eq!("a..b".parse::<Handle>(), Err(InvalidHandle::NotADomain));
 	}
 
 	#[test]
@@ -286,22 +214,22 @@ mod test {
 		// Test starting dots
 		assert_eq!(
 			".example.com".parse::<Handle>(),
-			Err(InvalidHandle::StartingDot)
+			Err(InvalidHandle::NotADomain)
 		);
 		// Test ending dots
 		assert_eq!(
 			"example.com.".parse::<Handle>(),
-			Err(InvalidHandle::EndingDot)
+			Err(InvalidHandle::NotADomain)
 		);
 		// Test starting hyphens
 		assert_eq!(
 			"-example.com".parse::<Handle>(),
-			Err(InvalidHandle::StartingHyphen)
+			Err(InvalidHandle::NotADomain)
 		);
 		// Test ending hyphens
 		assert_eq!(
 			"example.com-".parse::<Handle>(),
-			Err(InvalidHandle::EndingHyphen)
+			Err(InvalidHandle::NotADomain)
 		);
 	}
 
@@ -309,11 +237,11 @@ mod test {
 	fn reject_tld_starting_with_digit() {
 		assert_eq!(
 			"example.1com".parse::<Handle>(),
-			Err(InvalidHandle::TldStartsWithDigit)
+			Err(InvalidHandle::TldInvalid)
 		);
 		assert_eq!(
 			"foo.bar.123".parse::<Handle>(),
-			Err(InvalidHandle::TldStartsWithDigit)
+			Err(InvalidHandle::TldInvalid)
 		);
 		// Ensure digits are allowed in other positions of TLD
 		assert_eq!(
@@ -327,66 +255,92 @@ mod test {
 		// Test IPv4 addresses
 		assert_eq!(
 			"127.0.0.1".parse::<Handle>(),
-			Err(InvalidHandle::TldStartsWithDigit)
+			Err(InvalidHandle::TldInvalid)
 		);
 		assert_eq!(
 			"192.168.1.1".parse::<Handle>(),
-			Err(InvalidHandle::TldStartsWithDigit)
+			Err(InvalidHandle::TldInvalid)
 		);
 
 		// Test IPv6 addresses
-		assert_eq!(
-			"[::1]".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('['))
-		);
+		assert_eq!("[::1]".parse::<Handle>(), Err(InvalidHandle::NotADomain));
 		assert_eq!(
 			"[2001:db8::1]".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('['))
+			Err(InvalidHandle::NotADomain)
 		);
 	}
 
 	#[test]
-	fn reject_special_chars() {
+	fn accept_utf8_as_punycode() {
 		// Unicode characters
 		assert_eq!(
 			"héllo.com".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('é'))
+			Ok(Handle(LowercaseAscii("xn--hllo-bpa.com".parse().unwrap())))
 		);
 		assert_eq!(
 			"hello.cøm".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('ø'))
+			Ok(Handle(LowercaseAscii("hello.xn--cm-lka".parse().unwrap())))
 		);
 		assert_eq!(
 			"你好.com".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('你'))
+			Ok(Handle(LowercaseAscii("xn--6qq79v.com".parse().unwrap())))
 		);
 
 		// ASCII control codes
 		assert_eq!(
 			"hello\u{0000}.com".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('\u{0000}'))
+			Err(InvalidHandle::NotADomain)
 		);
 		assert_eq!(
 			"test\u{001F}.com".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('\u{001F}'))
+			Err(InvalidHandle::NotADomain)
 		);
 
 		// Symbols
 		assert_eq!(
 			"hello!.com".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('!'))
+			Err(InvalidHandle::NotADomain)
 		);
 		assert_eq!(
 			"hello@.com".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('@'))
+			Err(InvalidHandle::NotADomain)
 		);
 		assert_eq!(
 			"hello$.com".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('$'))
+			Err(InvalidHandle::NotADomain)
 		);
 		assert_eq!(
 			"hello%.com".parse::<Handle>(),
-			Err(InvalidHandle::InvalidCharacter('%'))
+			Err(InvalidHandle::NotADomain)
 		);
+	}
+
+	#[test]
+	fn unicode_based_domains_convert_via_punycode() {
+		assert_eq!(
+			"苹果.com".parse::<Handle>(),
+			Ok(Handle(LowercaseAscii("xn--gtvz22d.com".parse().unwrap())))
+		);
+	}
+
+	#[test]
+	fn reject_reserved_tlds() {
+		for tld in [
+			"alt",
+			"arpa",
+			"example",
+			"internal",
+			"invalid",
+			"local",
+			"localhost",
+			"onion",
+			"test",
+		] {
+			assert_eq!(
+				format!("foo.{tld}").parse::<Handle>(),
+				Err(InvalidHandle::TldReserved),
+				"faild on {tld}"
+			)
+		}
 	}
 }
