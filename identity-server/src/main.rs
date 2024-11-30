@@ -94,6 +94,9 @@ impl ServeArgs {
 		let v1_cfg = identity_server::v1::RouterConfig {
 			uuid_provider: Default::default(),
 			db_pool,
+			// TODO: Stop hard-coding this
+			did_hostname: url::Host::parse("did.socialvr.net").unwrap(),
+			handle_hostname: url::Host::parse("socialvr.net").unwrap(),
 		};
 		let oauth_cfg = identity_server::oauth::OAuthConfig {
 			google_client_id: config_file
