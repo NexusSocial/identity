@@ -2,6 +2,7 @@
 #![deny(clippy::allow_attributes, unsafe_op_in_unsafe_fn)]
 
 pub mod config;
+mod did;
 mod handle;
 pub mod jwk;
 pub mod jwks_provider;
