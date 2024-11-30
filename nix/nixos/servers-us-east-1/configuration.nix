@@ -9,7 +9,7 @@
 , ...
 }: {
   # You can import other NixOS modules here
-  imports = [ ];
+  # imports = [ ../identityServerSystemd.nix ];
 
   # BEGIN Recommendations from the linode article
   boot.loader.grub.forceInstall = true;
@@ -70,6 +70,7 @@
 
   users.groups = {
     plugdev = { };
+    docker = { };
   };
   users.users = {
     ${username} = {
@@ -81,6 +82,7 @@
       # TODO: Be sure to add any other groups you need (such as networkmanager, audio, docker, etc)
       extraGroups = [
         "wheel"
+        "docker"
       ];
     };
   };
@@ -100,6 +102,17 @@
     };
   };
 
+  virtualisation.containers.enable = true;
+  virtualisation.docker.enable = true;
+  # For some reason, podman leaves the bind mounts around each time the service
+  # is restarted. so we are using docker instead of podman.
+  virtualisation.oci-containers.backend = "docker";
+  virtualisation.oci-containers.containers.identity-server = {
+    autoStart = true;
+    image = "ghcr.io/nexussocial/identity-server:latest";
+    ports = [ "443:8443" ];
+    volumes = [ "${../identity-server-config.toml}:/etc/cfg/config.toml:ro" "identity-var:/var" ];
+  };
 
   environment.systemPackages = with pkgs; [
     neovim
@@ -109,8 +122,11 @@
     inetutils
     mtr
     sysstat
-
   ];
+
+  programs.bash.interactiveShellInit = ''
+    set -o vi
+  '';
 
   # https://nixos.wiki/wiki/FAQ/When_do_I_update_stateVersion
   system.stateVersion = "24.05";

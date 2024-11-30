@@ -1,0 +1,37 @@
+# Default settings. Alternative options are commented out.
+
+# Note: When using TLS, we will always send the HSTS header to force clients to only
+# use https urls.
+[http]
+port = 8443 # also supports 0 to mean random
+
+# Settings related to configuring TLS certificates. In most cases, the "acme" type is
+# the simplest to set up.
+[http.tls]
+type = "acme" # publicly visible port MUST be 443, otherwise the challenge fails
+domains = ["did.socialvr.net"] # You must fill this in with your public domain name(s).
+# domains = ["socialvr.net", "socialvr.net:1337", "10.11.12.13"]
+is_prod = true # we are using LetsEncrypt's main, production directory.
+email = "" # optional: you can fill in your email address here
+
+# [http.tls]
+# type = "disable" # disables TLS and everything will use HTTP instead.
+
+# [http.tls]
+# type = "self_signed"
+# domains = ["socialvr.net"]
+
+# [http.tls]
+# type = "file"
+# cert_path = "path/to/cert.pem"
+# private_key_path = "another/path/key.pem"
+
+[third_party.google]
+# To get the client id, follow the instructions at:
+# https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#get_your_google_api_client_id
+oauth2_client_id = "526864823942-93igje3cdb5t9hqj7quj93hroklvnbtq.apps.googleusercontent.com"
+
+[cache]
+# By default, we use the cache directory on your machine (from
+# `$XDG_CACHE_HOME/nexus_identity_server` or `~/.config/cache/nexus_identity_server`
+# dir = "path/to/my/cache/dir"

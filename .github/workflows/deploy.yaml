@@ -1,0 +1,34 @@
+name: Deploy to linode
+on:
+  workflow_call:
+    secrets:
+      SSH_KEY_PRIV:
+        required: true
+      CACHIX_AUTH_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy NixOS Machines
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: cachix/install-nix-action@v30
+    - uses: cachix/cachix-action@v15
+      with:
+        name: nexus-ci
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+    - name: Set up ssh-agent
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_KEY_PRIV }}
+    - name: Test SSH connection to servers
+      run: ssh -T -o StrictHostKeyChecking=no admin@servers-us-east-1.socialvr.net
+    - name: Ensure that the latest commit is actually going to be pulled by docker
+      env:
+        TAG: commit-${{ github.sha }}
+      run: |
+        ssh -o StrictHostKeyChecking=no admin@servers-us-east-1.socialvr.net \
+          docker pull "ghcr.io/nexussocial/identity-server:${TAG}"
+    - name: Deploy via deploy-rs
+      run: nix run .#deploy-rs -- .
