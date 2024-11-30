@@ -47,11 +47,9 @@ jobs:
 
   nix:
     name: Nix
-    needs: [check-inputs, container] # because we want the latest container
+    needs: check-inputs
     uses: ./.github/workflows/nix.yaml
     secrets: inherit
-    with:
-      deploy: ${{ needs.check-inputs.outputs.is-default-branch == 'true' }}
 
   container:
     name: Container
@@ -60,4 +58,11 @@ jobs:
     with:
       push: ${{ needs.check-inputs.outputs.is-default-branch == 'true' }}
       additional-tags: ${{ (needs.check-inputs.outputs.is-default-branch == 'true') && 'latest' || '' }}
+
+  deploy:
+    name: Deploy
+    needs: [nix, container]
+    if: ${{ needs.check-inputs.outputs.is-default-branch == 'true' }}
+    uses: ./.github/workflows/deploy.yaml
+    secrets: inherit
 
