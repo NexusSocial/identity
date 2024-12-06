@@ -25,4 +25,4 @@ either:
 at your option. This means you can select the license you prefer!
 
 Any contribution intentionally submitted for inclusion in the work by you, shall be
-triple licensed as above, without any additional terms or conditions.
+dual licensed as above, without any additional terms or conditions.
