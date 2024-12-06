@@ -4,10 +4,67 @@
 
 use std::{path::PathBuf, str::FromStr};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub const DEFAULT_CONFIG_CONTENTS: &str = include_str!("../default-config.toml");
 const CACHE_DIR_SUFFIX: &str = "nexus_identity_server";
+
+/// Deserializes by calling url::Host::parse on a string
+fn deserialize_host<'de, D>(deserializer: D) -> Result<url::Host, D::Error>
+where
+	D: Deserializer<'de>,
+{
+	let buf = String::deserialize(deserializer)?;
+	url::Host::parse(&buf).map_err(serde::de::Error::custom)
+}
+
+/// Serializes by calling url::Host::to_string
+fn serialize_host<S>(host: &url::Host, serializer: S) -> Result<S::Ok, S::Error>
+where
+	S: Serializer,
+{
+	match host {
+		url::Host::Domain(domain) => serializer.serialize_str(domain),
+		url::Host::Ipv4(ip_addr) => serializer.serialize_str(&ip_addr.to_string()),
+		url::Host::Ipv6(ip_addr) => serializer.serialize_str(&ip_addr.to_string()),
+	}
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
+#[serde(deny_unknown_fields, rename_all = "snake_case")]
+pub struct DomainConfig {
+	#[serde(
+		deserialize_with = "deserialize_host",
+		serialize_with = "serialize_host"
+	)]
+	did: url::Host,
+	#[serde(
+		deserialize_with = "deserialize_host",
+		serialize_with = "serialize_host"
+	)]
+	handle: url::Host,
+}
+
+impl DomainConfig {
+	fn validate(&self) -> Result<(), ValidationError> {
+		if !matches!(self.did, url::Host::Domain(_)) {
+			return Err(ValidationError::DomainDid(DomainError::IpAddress));
+		}
+		if !matches!(self.handle, url::Host::Domain(_)) {
+			return Err(ValidationError::DomainHandle(DomainError::IpAddress));
+		}
+		Ok(())
+	}
+}
+
+impl Default for DomainConfig {
+	fn default() -> Self {
+		Self {
+			did: url::Host::parse("did.example.com").expect("infallible"),
+			handle: url::Host::parse("example.com").expect("infallible"),
+		}
+	}
+}
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
@@ -56,11 +113,6 @@ pub struct HttpConfig {
 
 impl HttpConfig {
 	fn validate(&self) -> Result<(), ValidationError> {
-		if let TlsConfig::Acme { ref domains, .. } = self.tls {
-			if domains.is_empty() {
-				return Err(ValidationError::UnspecifiedDomain);
-			}
-		}
 		Ok(())
 	}
 }
@@ -115,12 +167,14 @@ pub enum TlsConfig {
 	Acme {
 		/// Whether we use the staging or prod LetsEncrypt directory.
 		is_prod: bool,
-		domains: Vec<String>,
+		/// Domains are in addition to `domains.did` and `domains.handle`
+		additional_domains: Vec<String>,
 		email: String,
 	},
 	/// Creates a self-signed certificate
 	SelfSigned {
-		domains: Vec<String>,
+		/// Domains are in addition to `domains.did` and `domains.handle`
+		additional_domains: Vec<String>,
 	},
 	File {
 		path: PathBuf,
@@ -130,7 +184,7 @@ pub enum TlsConfig {
 impl Default for TlsConfig {
 	fn default() -> Self {
 		Self::Acme {
-			domains: Vec::new(),
+			additional_domains: Vec::new(),
 			email: String::new(),
 			is_prod: true,
 		}
@@ -151,9 +205,17 @@ pub enum ConfigError {
 }
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
+pub enum DomainError {
+	#[error("expected a domain, not an ip address")]
+	IpAddress,
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum ValidationError {
-	#[error("when using ACME tls, you *must* specify at least one domain")]
-	UnspecifiedDomain,
+	#[error("error in domain.did: {0}")]
+	DomainDid(DomainError),
+	#[error("error in domain.handle: {0}")]
+	DomainHandle(DomainError),
 }
 
 /// The contents of the config file. Contains all settings customizeable during
@@ -161,6 +223,8 @@ pub enum ValidationError {
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+	#[serde(default)]
+	pub domain: DomainConfig,
 	#[serde(default)]
 	pub database: DatabaseConfig,
 	#[serde(default)]
@@ -174,6 +238,7 @@ pub struct Config {
 impl Config {
 	/// Validates the deserialized config
 	pub fn validate(&self) -> Result<(), ValidationError> {
+		self.domain.validate()?;
 		self.http.validate()?;
 		Ok(())
 	}
@@ -196,6 +261,10 @@ mod test {
 	/// in case something is messed up.
 	fn default_config() -> Config {
 		Config {
+			domain: DomainConfig {
+				did: url::Host::Domain(String::from("did.example.com")),
+				handle: url::Host::Domain(String::from("example.com")),
+			},
 			database: DatabaseConfig::Sqlite {
 				db_file: PathBuf::from("./identities.db"),
 			},
@@ -203,7 +272,7 @@ mod test {
 				port: 8443,
 				tls: TlsConfig::Acme {
 					email: String::new(),
-					domains: Vec::new(),
+					additional_domains: Vec::new(),
 					is_prod: true,
 				},
 			},
@@ -224,14 +293,11 @@ mod test {
 	}
 
 	#[test]
-	fn test_default_config_deserializes_correctly_but_fails_validation() {
+	fn test_default_config_deserializes_correctly_and_passes_validation() {
 		let deserialized: Config = toml::from_str(DEFAULT_CONFIG_CONTENTS)
 			.expect("default config file should always deserialize");
 		assert_eq!(deserialized, Config::default());
-		assert_eq!(
-			deserialized.validate(),
-			Err(ValidationError::UnspecifiedDomain)
-		)
+		assert_eq!(deserialized.validate(), Ok(()));
 	}
 
 	#[test]
@@ -266,5 +332,14 @@ mod test {
 				..Config::default()
 			}
 		);
+	}
+
+	#[test]
+	fn test_default_config_round_trips() {
+		let serialized = toml::to_string_pretty(&Config::default())
+			.expect("default config should serialize");
+		let deserialized: Config =
+			toml::from_str(&serialized).expect("should deserialize");
+		assert_eq!(deserialized, Config::default());
 	}
 }

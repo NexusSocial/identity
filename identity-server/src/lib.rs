@@ -129,7 +129,7 @@ pub async fn spawn_https_server(
 			todo!("have not yet implemented support for self-signed certs")
 		}
 		TlsConfig::Acme {
-			domains,
+			additional_domains: domains,
 			email,
 			is_prod,
 		} => (domains, email, is_prod),

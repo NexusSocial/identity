@@ -1,4 +1,8 @@
-# Default settings. Alternative options are commented out.
+# This file contains the default server settings. Alternative options are commented out.
+
+[domains]
+did = "" # The canonical public domain name for the did:web server.
+handle = "" # The canonical public domain name for the handle server.
 
 # Note: When using TLS, we will always send the HSTS header to force clients to only
 # use https urls.
