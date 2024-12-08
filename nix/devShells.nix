@@ -16,6 +16,7 @@ in
     buildInputs = (with pkgs; [
       nixpkgs-fmt
       cargo-deny
+      dotnetCorePackages.sdk_9_0
     ]) ++ pkgs.lib.optional pkgs.stdenv.isDarwin [
       pkgs.libiconv
     ] ++ [

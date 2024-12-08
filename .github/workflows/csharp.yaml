@@ -1,0 +1,41 @@
+name: C# CI
+on:
+  workflow_dispatch:
+  workflow_call:
+
+env:
+  CI_IS_DEFAULT_BRANCH: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+jobs:
+  fmt:
+    name: Check Formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.2.0
+
+      - name: Check formatting
+        run: dotnet format --verify-no-changes
+
+  test:
+    name: Run Tests
+    strategy:
+      matrix:
+        runs-on: ["ubuntu-24.04", "windows-2022", "macos-14"]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4.2.0
+
+      - name: Test
+        run: dotnet test
+
+  build:
+    name: Build Binaries
+    strategy:
+      matrix:
+        runs-on: ["ubuntu-24.04", "windows-2022", "macos-14"]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4.2.0
+
+      - name: Build
+        run: dotnet build
