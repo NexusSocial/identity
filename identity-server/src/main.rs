@@ -33,8 +33,11 @@ async fn load_config(cfg_path: &Path) -> Result<Config> {
 		.and_then(|cfg: Config| {
 			cfg.validate().map(|()| cfg).or_else(|err| {
 				let suggestion = match err {
-					ValidationError::UnspecifiedDomain => {
-						"try adding your domain in the `http.tls.domains` list"
+					ValidationError::DomainDid(_) => {
+						"try correcting the info you put in `domain.did`"
+					}
+					ValidationError::DomainHandle(_) => {
+						"try correcting the info you put in `domain.handle`"
 					}
 				};
 				Err(err)
