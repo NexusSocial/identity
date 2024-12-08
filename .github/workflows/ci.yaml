@@ -45,6 +45,11 @@ jobs:
     with:
       cargo-profile: ${{ needs.check-inputs.outputs.cargo-profile }}
 
+  csharp:
+    name: C#
+    needs: check-inputs
+    uses: ./.github/workflows/csharp.yaml
+
   nix:
     name: Nix
     needs: check-inputs
