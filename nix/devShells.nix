@@ -19,6 +19,7 @@ in
       mdbook
       mdbook-mermaid
       nixpkgs-fmt
+      trunk
     ]) ++ pkgs.lib.optional pkgs.stdenv.isDarwin [
       pkgs.libiconv
     ] ++ [
