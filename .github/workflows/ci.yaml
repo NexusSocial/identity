@@ -45,6 +45,11 @@ jobs:
     with:
       cargo-profile: ${{ needs.check-inputs.outputs.cargo-profile }}
 
+  book:
+    name: Book
+    needs: check-inputs
+    uses: ./.github/workflows/book.yaml
+
   csharp:
     name: C#
     needs: check-inputs
@@ -66,8 +71,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [nix, container]
+    needs: [nix, container, book]
     if: ${{ needs.check-inputs.outputs.is-default-branch == 'true' }}
     uses: ./.github/workflows/deploy.yaml
     secrets: inherit
-

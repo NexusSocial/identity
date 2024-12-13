@@ -14,9 +14,11 @@ in
   default = pkgs.mkShell {
     # These programs be available to the dev shell
     buildInputs = (with pkgs; [
-      nixpkgs-fmt
       cargo-deny
       dotnetCorePackages.sdk_9_0
+      mdbook
+      mdbook-mermaid
+      nixpkgs-fmt
     ]) ++ pkgs.lib.optional pkgs.stdenv.isDarwin [
       pkgs.libiconv
     ] ++ [
