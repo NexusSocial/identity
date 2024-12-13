@@ -8,7 +8,7 @@ on:
         required: true
 
 jobs:
-  deploy:
+  nix:
     name: Deploy NixOS Machines
     runs-on: ubuntu-24.04
     steps:
@@ -32,3 +32,13 @@ jobs:
           docker pull "ghcr.io/nexussocial/identity-server:${TAG}"
     - name: Deploy via deploy-rs
       run: nix run .#deploy-rs -- .
+
+  pages:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
