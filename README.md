@@ -9,6 +9,8 @@ In particular, it hosts:
 * [identity-server](/identity-server) - A did:web HTTP server that implements a "sign
   in with google/meta" approach.
 
+Docs for the repo live [in the mdbook](https://nexussocial.github.io/identity/).
+
 ## First Time Setup
 
 - Install [rustup](https://rustup.rs)
