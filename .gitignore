@@ -39,3 +39,4 @@ my-config.toml
 **/msbuild.err
 **/msbuild.wrn
 
+/docs/book/
