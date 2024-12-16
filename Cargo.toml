@@ -3,6 +3,7 @@ resolver = "2"
 members = [
 	"did-simple",
 	"header-parsing",
+	"identity-frontend",
 	"identity-server",
 ]
 
