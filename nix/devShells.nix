@@ -15,10 +15,13 @@ in
     # These programs be available to the dev shell
     buildInputs = (with pkgs; [
       cargo-deny
+      csharpier
       dotnetCorePackages.sdk_9_0
       mdbook
       mdbook-mermaid
       nixpkgs-fmt
+      omnisharp-roslyn
+      roslyn-ls
     ]) ++ pkgs.lib.optional pkgs.stdenv.isDarwin [
       pkgs.libiconv
     ] ++ [
