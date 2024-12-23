@@ -13,8 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.0
 
+      - name: Install dotnet tools
+        run: dotnet tool restore
       - name: Check formatting
-        run: dotnet format --verify-no-changes
+        run: dotnet csharpier --check .
 
   test:
     name: Run Tests
