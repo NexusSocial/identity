@@ -45,6 +45,11 @@
           ];
           config = {
             # allowUnfree = true;
+            permittedInsecurePackages = [
+              # Needed for roslyn-ls, see
+              # https://github.com/NixOS/nixpkgs/blob/4989a246/pkgs/by-name/ro/roslyn-ls/package.nix#L21
+              "dotnet-sdk-6.0.428"
+            ];
           };
         };
       });

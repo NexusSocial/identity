@@ -9,16 +9,23 @@ let
   rustPlatform = pkgs.makeRustPlatform {
     inherit (rustToolchain) cargo rustc;
   };
+  dotnet = (with pkgs.dotnetCorePackages;
+    # We will combine the two latest dotnet SDKs to give all tools time to
+    # upgrade
+    combinePackages [
+      sdk_9_0
+    ]);
 in
 {
   default = pkgs.mkShell {
     # These programs be available to the dev shell
     buildInputs = (with pkgs; [
       cargo-deny
-      dotnetCorePackages.sdk_9_0
+      dotnet
       mdbook
       mdbook-mermaid
       nixpkgs-fmt
+      roslyn-ls
     ]) ++ pkgs.lib.optional pkgs.stdenv.isDarwin [
       pkgs.libiconv
     ] ++ [
