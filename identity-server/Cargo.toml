@@ -19,6 +19,7 @@ clap = { workspace = true, features = ["derive", "env", "color"] }
 color-eyre.workspace = true
 derive_more = { workspace = true, features = ["debug", "deref", "deref_mut"] }
 did-simple.workspace = true
+ed25519-dalek.workspace = true
 futures.workspace = true
 header-parsing.workspace = true
 http-body-util.workspace = true

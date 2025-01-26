@@ -25,8 +25,8 @@ allow-unsafe = []
 bs58 = "0.5.1"
 bytes = "1.6.0"
 thiserror.workspace = true
-ed25519-dalek = { version = "2.1.1", optional = true, features = ["digest"] }
-curve25519-dalek = { version = "4.1.2", optional = true }
+ed25519-dalek = { workspace = true, optional = true, features = ["digest"] }
+curve25519-dalek = { workspace = true, optional = true }
 rand_core = { version = "0.6.4", optional = true, features = ["getrandom"] }
 
 [dev-dependencies]
