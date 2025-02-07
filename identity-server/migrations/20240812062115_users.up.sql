@@ -1,6 +1,6 @@
 CREATE TABLE "users"
 (
 	user_id BLOB PRIMARY KEY NOT NULL,
-	handle TEXT NOT NULL,
+	handle TEXT NOT NULL UNIQUE,
 	pubkeys_jwks TEXT NOT NULL UNIQUE
 ) STRICT;

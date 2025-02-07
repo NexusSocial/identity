@@ -4,11 +4,11 @@ use did_simple::crypto::ed25519;
 use jose_jwk::Jwk;
 
 /// Creates a JWK from a ed25519 verifying key.
-pub fn ed25519_pub_jwk(pub_key: ed25519::VerifyingKey) -> Jwk {
+pub fn ed25519_pub_jwk(pub_key: &ed25519::VerifyingKey) -> Jwk {
 	Jwk {
 		key: jose_jwk::Okp {
 			crv: jose_jwk::OkpCurves::Ed25519,
-			x: pub_key.into_inner().as_bytes().as_slice().to_owned().into(),
+			x: pub_key.as_inner().as_bytes().as_slice().to_owned().into(),
 			d: None,
 		}
 		.into(),
@@ -46,7 +46,7 @@ mod test {
 		);
 
 		let input_key = ed25519::VerifyingKey::try_from_bytes(&pubkey_bytes).unwrap();
-		let mut output_jwk = ed25519_pub_jwk(input_key);
+		let mut output_jwk = ed25519_pub_jwk(&input_key);
 
 		// Check all additional outputs for expected values
 		assert_eq!(

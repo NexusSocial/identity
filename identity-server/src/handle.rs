@@ -1,3 +1,10 @@
+//! Handle parsing and validation.
+//!
+//! Handles are domain names that provide a human-readable and changeable identifier
+//! for users. Handles must be a valid domain name. For more information on the rules
+//! for handles, read
+//! <https://atproto.com/specs/handle#additional-non-syntax-restrictions>
+
 use std::str::FromStr;
 
 use ascii::{AsciiStr, AsciiString};
@@ -51,7 +58,7 @@ impl AsRef<[u8]> for LowercaseAscii {
 /// <https://atproto.com/specs/handle#handle-identifier-syntax>
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum InvalidHandle {
-	#[error("failed idna conversion")]
+	#[error("failed idna conversion, it was not a domain")]
 	NotADomain,
 
 	#[error("missing or invalid top-level domain")]
@@ -80,6 +87,7 @@ fn is_reserved_tld(tld: &AsciiStr) -> bool {
 	.any(|banned| banned == tld)
 }
 
+/// Represents a valid handle. For more info see the [module level documentation](self)
 #[derive(Debug, Eq, PartialEq, Clone, derive_more::Deref, derive_more::DerefMut)]
 pub struct Handle(LowercaseAscii);
 
@@ -118,6 +126,34 @@ impl FromStr for Handle {
 		debug_assert_eq!(ascii, ascii.to_ascii_lowercase());
 		Ok(Self(LowercaseAscii(ascii)))
 	}
+}
+
+/// Rejects any that match a reserved subdomain.
+pub fn is_handle_prefix_reserved(handle_prefix: &str) -> bool {
+	matches!(
+		handle_prefix,
+		// IDK why the formatting is weird
+		"did"
+			| "user" | "users"
+			| "admin" | "admins"
+			| "login" | "web"
+			| "portal"
+			| "id" | "account"
+			| "accounts"
+			| "mail" | "mailto"
+			| "stage" | "staging"
+			| "dev" | "prod"
+			| "production"
+			| "canary"
+			| "internal"
+			| "help" | "helpdesk"
+			| "finance"
+			| "server"
+			| "servers"
+			| "handle"
+			| "handles"
+			| "hello"
+	)
 }
 
 #[cfg(test)]

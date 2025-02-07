@@ -50,6 +50,10 @@ impl VerifyingKey {
 		self.0
 	}
 
+	pub fn as_inner(&self) -> &ed25519_dalek::VerifyingKey {
+		&self.0
+	}
+
 	/// Verifies `message` using the ed25519ph algorithm.
 	///
 	/// # Example
