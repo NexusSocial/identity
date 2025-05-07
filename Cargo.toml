@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
 	"did-simple",
+	"did-yeet",
 	"header-parsing",
 	"identity-server",
 ]
@@ -22,6 +23,7 @@ axum-extra = "0.9.3"
 axum-macros = "0.4.1"
 axum-server = "0.7.1"
 base64 = "0.21.7"
+bs58 = "0.5.1"
 clap = { version = "4.4.11", features = ["derive"] }
 color-eyre = "0.6"
 curve25519-dalek = "4.1.2"
@@ -39,6 +41,7 @@ reqwest = { version = "0.12.7", default-features = false }
 rustls-acme = { version = "0.11.1", default-features = false }
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.114"
+sha2 = "0.10.9"
 thiserror = "1.0.64"
 tokio = { version = "1.35.1", default-features = false }
 toml = "0.8.19"
