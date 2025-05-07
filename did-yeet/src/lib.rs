@@ -1,0 +1,4 @@
+pub mod keychain;
+
+/// NOTE: This is a placeholder name and will be renamed later.
+pub const METHOD_IDENTIFIER: &str = "yeet";

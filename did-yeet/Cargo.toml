@@ -1,0 +1,22 @@
+[package]
+name = "did-yeet"
+version = "0.0.0"
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "did:yeet Decentralized Identitfier"
+publish = false
+
+[features]
+
+[dependencies]
+base64.workspace = true
+bitflags = { version = "2.9.0", features = ["serde"] }
+bs58.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+serde_ipld_dagcbor = "0.6.3"
+serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
