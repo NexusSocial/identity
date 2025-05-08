@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// A did:key string. Does not perform base58 decoding or validate the public key.
 ///
@@ -39,23 +39,6 @@ impl<'a> DidKey<'a> {
 	//
 	// 	DidKey::try_from(s).map_err(serde::de::Error::custom)
 	// }
-
-	pub fn deserialize_zero_copy_slice<'de: 'a, D>(
-		deserializer: D,
-	) -> Result<Cow<'a, [Self]>, D::Error>
-	where
-		D: Deserializer<'de>,
-	{
-		let cowslice: Vec<&'de str> = Deserialize::deserialize(deserializer)?;
-
-		let result: Vec<DidKey> = cowslice
-			.into_iter()
-			.map(DidKey::try_from)
-			.collect::<Result<_, _>>()
-			.map_err(serde::de::Error::custom)?;
-
-		Ok(Cow::Owned(result))
-	}
 }
 
 impl<'a> From<DidKey<'a>> for Cow<'a, str> {
