@@ -26,7 +26,7 @@ pub struct GenesisKeychain<'a> {
 	/// CBOR-serialized Keychain with empty values for `sigs` and `children`.
 	// #[serde(deserialize_with = "Signature::deserialize_zero_copy_slice")]
 	#[serde(borrow)]
-	gsigs: Cow<'a, [Signature<'a>]>,
+	gsigs: Cow<'a, [Signature]>,
 	/// Key ID comes from index in vec.
 	// #[serde(deserialize_with = "DidKey::deserialize_zero_copy_slice")]
 	#[serde(borrow)]
@@ -94,8 +94,7 @@ pub struct Keychain<'a> {
 	/// parent key.
 	/// Signatures are are of CBOR-serialized Keychain with empty values for `gsigs` and with
 	/// `children` not present.
-	#[serde(borrow)]
-	sigs: Vec<Signature<'a>>,
+	sigs: Vec<Signature>,
 	/// Information about child keys. `KeyId` is `index_in_vec + self.n_root_keys()`
 	children: Vec<ChildKeyInfo>,
 }
@@ -200,8 +199,8 @@ mod tests {
 			DidKey::from_base58_btc_encoded("baz"),
 		];
 		let sigs = vec![
-			Signature(Cow::Owned(vec![69; 8])),
-			Signature(Cow::Owned(vec![0xDE, 0xAD, 0xBE, 0xEF])),
+			Signature(vec![69; 8]),
+			Signature(vec![0xDE, 0xAD, 0xBE, 0xEF]),
 		];
 		let v = KeychainVersion::V0;
 		let genesis: GenesisKeychain<'static> = GenesisKeychain {

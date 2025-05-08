@@ -1,58 +1,57 @@
-use std::borrow::Cow;
-
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Signature bytes
-#[derive(Debug, Clone, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(transparent)]
-// NOTE: We intentionally don't borrow to make the common case (owned deserialization) simple
-pub struct Signature<'a>(pub Cow<'a, [u8]>);
+pub struct Signature(pub Vec<u8>);
 
-impl<'a> Signature<'a> {
-	// pub fn deserialize_zero_copy<'de: 'a, D>(deserializer: D) -> Result<Self, D::Error>
-	// where
-	// 	D: Deserializer<'de>,
-	// {
-	// 	let s: &[u8] = Deserialize::deserialize(deserializer)?;
-	//
-	// 	Signature::try_from(s).map_err(serde::de::Error::custom)
-	// }
-
-	pub fn deserialize_zero_copy_slice<'de: 'a, D>(
-		deserializer: D,
-	) -> Result<Cow<'a, [Self]>, D::Error>
-	where
-		D: Deserializer<'de>,
-	{
-		let borrows: Vec<&'de [u8]> = Deserialize::deserialize(deserializer)?;
-
-		let result: Vec<Signature> = borrows.into_iter().map(Signature::from).collect();
-
-		Ok(Cow::Owned(result))
+impl Signature {
+	pub fn new(bytes: &[u8]) -> Self {
+		Signature(Vec::from(bytes))
 	}
 }
 
-impl<'a> From<&'a [u8]> for Signature<'a> {
-	fn from(value: &'a [u8]) -> Self {
-		Signature(Cow::Borrowed(value))
-	}
-}
-
-impl PartialEq<Signature<'_>> for Signature<'_> {
-	fn eq(&self, other: &Signature<'_>) -> bool {
-		self.0 == other.0
+impl From<Vec<u8>> for Signature {
+	fn from(value: Vec<u8>) -> Self {
+		Signature(value)
 	}
 }
 
 #[cfg(test)]
 mod tests {
+	use color_eyre::{eyre::Context, Section};
+
 	use super::*;
 
 	#[test]
-	fn test_static_deserialize() {
-		#[derive(Debug, Serialize, Deserialize)]
+	fn test_serde() -> color_eyre::Result<()> {
+		let _ = color_eyre::install();
+		#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 		struct S {
-			field: Vec<Signature<'static>>,
+			field: Vec<Signature>,
 		}
+
+		let expected_deserialized = S {
+			field: vec![Signature::from(vec![0xDE, 0xAD, 0xBE, 0xEF])],
+		};
+		let expected_serialized = serde_json::json!({
+			"field": vec![vec![0xDEu8, 0xADu8, 0xBEu8, 0xEFu8]],
+		});
+
+		assert_eq!(
+			serde_json::from_value::<S>(expected_serialized.clone())
+				.wrap_err("failed to deserialize")
+				.with_note(|| format!("json was {expected_serialized:#?}"))?,
+			expected_deserialized
+		);
+		assert_eq!(
+			serde_json::to_value(expected_deserialized.clone())
+				.wrap_err("failed to serialize")
+				.with_note(|| format!("struct was {expected_deserialized:?}"))?,
+			expected_serialized
+		);
+
+		Ok(())
 	}
 }

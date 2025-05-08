@@ -863,6 +863,7 @@ dependencies = [
  "base64 0.21.7",
  "bitflags",
  "bs58",
+ "color-eyre",
  "derive_more",
  "serde",
  "serde_ipld_dagcbor",
