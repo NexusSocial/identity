@@ -1,5 +1,6 @@
 pub mod did_key;
 pub mod keychain;
+pub mod signature;
 
 pub use crate::did_key::DidKey;
 

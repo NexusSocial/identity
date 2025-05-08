@@ -1,6 +1,6 @@
-use std::str::FromStr;
+use std::borrow::Cow;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// A did:key string. Does not perform base58 decoding or validate the public key.
 ///
@@ -9,39 +9,65 @@ use serde::{Deserialize, Serialize};
 /// # Example
 ///
 /// ```
+/// # use did_yeet::DidKey;
 /// /// From did:key spec section 4.1
-/// let did_key: DidKey = "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp".parse().unwrap();
-/// assert_eq!()
+/// let did_key: DidKey = "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp".try_into().unwrap();
 /// ```
 ///
 /// [spec]: https://w3c-ccg.github.io/did-key-spec
 #[derive(Debug, Clone, Eq, Hash, derive_more::Display, Serialize)]
 #[serde(transparent)]
-pub struct DidKey(String);
+pub struct DidKey<'a>(Cow<'a, str>);
 
-impl DidKey {
-	pub const PREFIX: &str = "did:key:z";
+impl<'a> DidKey<'a> {
+	pub const PREFIX: &'static str = "did:key:z";
 
 	/// Construct a `DidKey` from [base58-btc](bs58) encoded data.
 	pub fn from_base58_btc_encoded(data: &str) -> Self {
-		Self(format!("{}{data}", Self::PREFIX))
+		Self(Cow::Owned(format!("{}{data}", Self::PREFIX)))
 	}
 
 	pub fn as_str(&self) -> &str {
-		self.0.as_str()
+		self.0.as_ref()
+	}
+
+	// pub fn deserialize_zero_copy<'de: 'a, D>(deserializer: D) -> Result<Self, D::Error>
+	// where
+	// 	D: Deserializer<'de>,
+	// {
+	// 	let s: &str = Deserialize::deserialize(deserializer)?;
+	//
+	// 	DidKey::try_from(s).map_err(serde::de::Error::custom)
+	// }
+
+	pub fn deserialize_zero_copy_slice<'de: 'a, D>(
+		deserializer: D,
+	) -> Result<Cow<'a, [Self]>, D::Error>
+	where
+		D: Deserializer<'de>,
+	{
+		let cowslice: Vec<&'de str> = Deserialize::deserialize(deserializer)?;
+
+		let result: Vec<DidKey> = cowslice
+			.into_iter()
+			.map(DidKey::try_from)
+			.collect::<Result<_, _>>()
+			.map_err(serde::de::Error::custom)?;
+
+		Ok(Cow::Owned(result))
 	}
 }
 
-impl From<DidKey> for String {
-	fn from(value: DidKey) -> Self {
+impl<'a> From<DidKey<'a>> for Cow<'a, str> {
+	fn from(value: DidKey<'a>) -> Self {
 		value.0
 	}
 }
 
-impl TryFrom<String> for DidKey {
+impl<'a> TryFrom<Cow<'a, str>> for DidKey<'a> {
 	type Error = TryFromStrErr;
 
-	fn try_from(value: String) -> Result<Self, Self::Error> {
+	fn try_from(value: Cow<'a, str>) -> Result<Self, Self::Error> {
 		if !value.starts_with(Self::PREFIX) {
 			return Err(TryFromStrErr::WrongPrefix);
 		}
@@ -50,19 +76,26 @@ impl TryFrom<String> for DidKey {
 	}
 }
 
-impl FromStr for DidKey {
-	type Err = TryFromStrErr;
+impl<'a> TryFrom<&'a str> for DidKey<'a> {
+	type Error = TryFromStrErr;
 
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		if !s.starts_with(Self::PREFIX) {
-			return Err(TryFromStrErr::WrongPrefix);
-		}
-
-		Ok(Self(s.to_owned()))
+	fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+		Cow::Borrowed(value).try_into()
 	}
 }
 
-impl<'de> Deserialize<'de> for DidKey {
+impl TryFrom<String> for DidKey<'static> {
+	type Error = TryFromStrErr;
+
+	fn try_from(value: String) -> Result<Self, Self::Error> {
+		Cow::<'_, str>::Owned(value).try_into()
+	}
+}
+
+// The less efficient, non-zero-copy implementation.
+// NOTE: Because we deserialize owned anyway, the return type lifetime is fully decoupled from the
+// deserializer lifetime.
+impl<'a, 'de> Deserialize<'de> for DidKey<'a> {
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 	where
 		D: serde::Deserializer<'de>,
@@ -72,15 +105,15 @@ impl<'de> Deserialize<'de> for DidKey {
 	}
 }
 
-impl<T: AsRef<str>> PartialEq<T> for DidKey {
+impl<T: AsRef<str>> PartialEq<T> for DidKey<'_> {
 	fn eq(&self, other: &T) -> bool {
 		self.0 == other.as_ref()
 	}
 }
 
-impl AsRef<str> for DidKey {
+impl AsRef<str> for DidKey<'_> {
 	fn as_ref(&self) -> &str {
-		self.0.as_str()
+		self.0.as_ref()
 	}
 }
 
@@ -100,57 +133,70 @@ mod tests {
 	#[test]
 	fn test_round_trip() {
 		let raw = GOOD_ED25519;
-		let parsed: DidKey =
-			raw.parse().expect("key is valid so parsing should succeed");
-		let try_from: DidKey = raw
+		let borrowed: DidKey = raw
+			.try_into()
+			.expect("key is valid so parsing should succeed");
+		let owned: DidKey = raw
 			.to_owned()
 			.try_into()
 			.expect("key is valid so parsing should succeed");
+		let cow: DidKey = Cow::Borrowed(raw)
+			.try_into()
+			.expect("key is valid so parsing should succeed");
 
-		// all three values equal
-		assert_eq!(parsed, try_from);
-		assert_eq!(parsed, raw);
-		assert_eq!(try_from, raw);
+		// compare to str
+		assert_eq!(borrowed, raw);
+		assert_eq!(owned, raw);
+		assert_eq!(cow, raw);
 
-		assert_eq!(raw, parsed.as_str());
-		assert_eq!(raw, parsed.as_ref());
-
-		assert_eq!(raw, String::from(parsed));
+		// compare to Self
+		assert_eq!(borrowed, owned);
+		assert_eq!(owned, cow);
+		assert_eq!(cow, borrowed);
 	}
 
 	#[test]
 	fn test_invalid_multibase_prefix_fails() {
 		let bad = "did:key:q";
-		assert_eq!(bad.parse::<DidKey>(), Err(TryFromStrErr::WrongPrefix));
-		assert_eq!(
-			DidKey::try_from(bad.to_owned()),
-			Err(TryFromStrErr::WrongPrefix)
-		);
+		let borrowed = DidKey::try_from(bad);
+		let owned = DidKey::try_from(bad.to_owned());
+		let cow = DidKey::try_from(Cow::Borrowed(bad));
+		let expected = Err(TryFromStrErr::WrongPrefix);
+
+		assert_eq!(borrowed, expected);
+		assert_eq!(owned, expected);
+		assert_eq!(cow, expected);
 	}
 
 	#[test]
 	fn test_invalid_method_prefix_fails() {
 		let bad = "did:foo:z";
-		assert_eq!(bad.parse::<DidKey>(), Err(TryFromStrErr::WrongPrefix));
-		assert_eq!(
-			DidKey::try_from(bad.to_owned()),
-			Err(TryFromStrErr::WrongPrefix)
-		);
+		let borrowed = DidKey::try_from(bad);
+		let owned = DidKey::try_from(bad.to_owned());
+		let cow = DidKey::try_from(Cow::Borrowed(bad));
+		let expected = Err(TryFromStrErr::WrongPrefix);
+
+		assert_eq!(borrowed, expected);
+		assert_eq!(owned, expected);
+		assert_eq!(cow, expected);
 	}
 
 	#[test]
 	fn test_empty_str_fails() {
 		let bad = "";
-		assert_eq!(bad.parse::<DidKey>(), Err(TryFromStrErr::WrongPrefix));
-		assert_eq!(
-			DidKey::try_from(bad.to_owned()),
-			Err(TryFromStrErr::WrongPrefix)
-		);
+		let borrowed = DidKey::try_from(bad);
+		let owned = DidKey::try_from(bad.to_owned());
+		let cow = DidKey::try_from(Cow::Borrowed(bad));
+		let expected = Err(TryFromStrErr::WrongPrefix);
+
+		assert_eq!(borrowed, expected);
+		assert_eq!(owned, expected);
+		assert_eq!(cow, expected);
 	}
 
 	#[test]
 	fn test_display() {
-		let key: DidKey = GOOD_ED25519.parse().unwrap();
+		let key: DidKey = DidKey::try_from(GOOD_ED25519).unwrap();
 		assert_eq!(GOOD_ED25519, key.0);
 		assert_eq!(GOOD_ED25519, format!("{key}"));
 	}
@@ -159,11 +205,11 @@ mod tests {
 	fn test_serialize() {
 		#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 		struct S {
-			field: DidKey,
+			field: DidKey<'static>,
 		}
 
 		let original_deserialized = S {
-			field: GOOD_ED25519.parse().unwrap(),
+			field: GOOD_ED25519.try_into().unwrap(),
 		};
 		let original_serialized = serde_json::json!({
 			"field": GOOD_ED25519,
