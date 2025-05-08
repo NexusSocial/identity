@@ -87,20 +87,17 @@ pub struct Keychain<'a> {
 	/// Version.
 	v: KeychainVersion,
 	/// Key ID comes from index in vec.
-	#[serde(deserialize_with = "DidKey::deserialize_zero_copy_slice")]
 	#[serde(borrow)]
-	keys: Cow<'a, [DidKey<'a>]>,
+	keys: Vec<DidKey<'a>>,
 	/// Signatures that enroll each key. Index of vec corresponds to key in `keys`.
 	/// Genesis keys are signed by themselves, and child keys are signed by their
 	/// parent key.
 	/// Signatures are are of CBOR-serialized Keychain with empty values for `gsigs` and with
 	/// `children` not present.
-	// TODO: `GenesisKeychain` should use cow slice, but `Keychain` should use vec.
-	// Both should continue to use cow inside sig and key.
 	#[serde(borrow)]
-	sigs: Cow<'a, [Signature<'a>]>,
-	/// Information about child keys. `KeyId` is `index_in_vec + (keys.len() - children.len())`
-	children: Cow<'a, [ChildKeyInfo]>,
+	sigs: Vec<Signature<'a>>,
+	/// Information about child keys. `KeyId` is `index_in_vec + self.n_root_keys()`
+	children: Vec<ChildKeyInfo>,
 }
 
 impl<'a> Keychain<'a> {
@@ -110,7 +107,7 @@ impl<'a> Keychain<'a> {
 	}
 
 	#[inline]
-	fn n_root_keys(&self) -> usize {
+	pub fn n_root_keys(&self) -> usize {
 		self.keys.len() - self.children.len()
 	}
 
@@ -127,22 +124,11 @@ impl<'a> Keychain<'a> {
 	}
 }
 
-impl<'a> From<GenesisKeychain<'a>> for Keychain<'a> {
-	fn from(value: GenesisKeychain<'a>) -> Self {
-		Keychain {
-			v: value.v,
-			sigs: value.gsigs,
-			keys: value.keys,
-			children: Cow::Borrowed(&[]),
-		}
-	}
-}
-
 impl PartialEq<GenesisKeychain<'_>> for Keychain<'_> {
 	fn eq(&self, other: &GenesisKeychain<'_>) -> bool {
 		self.v == other.v
-			&& self.sigs == other.gsigs
-			&& self.keys == other.keys
+			&& self.sigs.as_slice() == other.gsigs.as_ref()
+			&& self.keys.as_slice() == other.keys.as_ref()
 			&& self.children.is_empty()
 	}
 }
@@ -209,19 +195,19 @@ mod tests {
 
 	#[test]
 	fn genesis_keychain_and_keychain_without_children_equivalent() {
-		let keys: Cow<'static, [DidKey]> = Cow::Owned(vec![
+		let keys = vec![
 			DidKey::from_base58_btc_encoded("foobar"),
 			DidKey::from_base58_btc_encoded("baz"),
-		]);
-		let sigs: Cow<'static, [Signature]> = Cow::Owned(vec![
+		];
+		let sigs = vec![
 			Signature(Cow::Owned(vec![69; 8])),
 			Signature(Cow::Owned(vec![0xDE, 0xAD, 0xBE, 0xEF])),
-		]);
+		];
 		let v = KeychainVersion::V0;
 		let genesis: GenesisKeychain<'static> = GenesisKeychain {
 			v,
-			gsigs: sigs.clone(),
-			keys: keys.clone(),
+			gsigs: Cow::Owned(sigs.clone()),
+			keys: Cow::Owned(keys.clone()),
 		};
 		let regular: Keychain<'static> = Keychain {
 			v,
