@@ -24,13 +24,11 @@ pub struct GenesisKeychain<'a> {
 	v: KeychainVersion,
 	/// Index of vec corresponds to key in KeyEntries. Signatures are of
 	/// CBOR-serialized Keychain with empty values for `sigs` and `children`.
-	// #[serde(deserialize_with = "Signature::deserialize_zero_copy_slice")]
 	#[serde(borrow)]
 	gsigs: Cow<'a, [Signature]>,
 	/// Key ID comes from index in vec.
-	// #[serde(deserialize_with = "DidKey::deserialize_zero_copy_slice")]
 	#[serde(borrow)]
-	keys: Cow<'a, [DidKey<'a>]>,
+	keys: Cow<'a, [DidKey]>,
 }
 
 impl GenesisKeychain<'_> {
@@ -66,8 +64,8 @@ impl PartialEq<GenesisKeychain<'_>> for GenesisKeychain<'_> {
 	}
 }
 
-impl PartialEq<Keychain<'_>> for GenesisKeychain<'_> {
-	fn eq(&self, other: &Keychain<'_>) -> bool {
+impl PartialEq<Keychain> for GenesisKeychain<'_> {
+	fn eq(&self, other: &Keychain) -> bool {
 		other == self
 	}
 }
@@ -83,12 +81,11 @@ pub enum TryIntoGenesisErr {
 /// The keychain that underpins the permissions of mutation of the document
 // TODO: Turn all Cows into regular vecs.
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Serialize, Deserialize)]
-pub struct Keychain<'a> {
+pub struct Keychain {
 	/// Version.
 	v: KeychainVersion,
 	/// Key ID comes from index in vec.
-	#[serde(borrow)]
-	keys: Vec<DidKey<'a>>,
+	keys: Vec<DidKey>,
 	/// Signatures that enroll each key. Index of vec corresponds to key in `keys`.
 	/// Genesis keys are signed by themselves, and child keys are signed by their
 	/// parent key.
@@ -99,7 +96,7 @@ pub struct Keychain<'a> {
 	children: Vec<ChildKeyInfo>,
 }
 
-impl<'a> Keychain<'a> {
+impl Keychain {
 	/// KeyId corresponds to position in slice.
 	pub fn root_keys(&self) -> &[DidKey] {
 		&self.keys[..self.n_root_keys()]
@@ -123,7 +120,7 @@ impl<'a> Keychain<'a> {
 	}
 }
 
-impl PartialEq<GenesisKeychain<'_>> for Keychain<'_> {
+impl PartialEq<GenesisKeychain<'_>> for Keychain {
 	fn eq(&self, other: &GenesisKeychain<'_>) -> bool {
 		self.v == other.v
 			&& self.sigs.as_slice() == other.gsigs.as_ref()
@@ -208,7 +205,7 @@ mod tests {
 			gsigs: Cow::Owned(sigs.clone()),
 			keys: Cow::Owned(keys.clone()),
 		};
-		let regular: Keychain<'static> = Keychain {
+		let regular: Keychain = Keychain {
 			v,
 			sigs,
 			keys,
