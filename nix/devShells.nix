@@ -4,7 +4,7 @@ let
   inherit (inputs) fenix;
   rustToolchain = fenix.packages.${system}.fromToolchainFile {
     file = ../rust-toolchain.toml;
-    sha256 = "sha256-yMuSb5eQPO/bHv+Bcf/US8LVMbf/G/0MSfiPwBhiPpk=";
+    sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
   };
   rustPlatform = pkgs.makeRustPlatform {
     inherit (rustToolchain) cargo rustc;
