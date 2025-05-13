@@ -1,8 +1,8 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
-/// A did:key string. Does not perform base58 decoding or validate the public key.
+/// A parsed did:key. Does not perform validate the public key.
 ///
 /// See also the [did:key spec][spec].
 ///
@@ -15,52 +15,72 @@ use serde::{Deserialize, Serialize};
 /// ```
 ///
 /// [spec]: https://w3c-ccg.github.io/did-key-spec
-#[derive(
-	Debug, Clone, Eq, Hash, derive_more::Display, derive_more::AsRef, Serialize,
-)]
-#[as_ref(str)]
-#[serde(transparent)]
-pub struct DidKey(String);
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
+pub struct DidKey {
+	pub multicodec: u32,
+	pub pubkey: Vec<u8>,
+}
 
 impl DidKey {
 	pub const PREFIX: &'static str = "did:key:z";
 
-	/// Construct a `DidKey` from [base58-btc](bs58) encoded data.
-	pub fn from_base58_btc_encoded(data: &str) -> Self {
-		Self(format!("{}{data}", Self::PREFIX))
-	}
+	/// Encodes as a string. Result written into `out`. `scratch` is used as temporary
+	/// scratch space, making it possible to reuse allocations.
+	pub fn to_str(&self, scratch: &mut Vec<u8>, out: &mut String) {
+		scratch.clear();
+		out.clear();
+		out.push_str(Self::PREFIX);
 
-	pub fn as_str(&self) -> &str {
-		self.0.as_ref()
-	}
+		{
+			let mut buf = unsigned_varint::encode::u32_buffer();
+			let encoded_varint =
+				unsigned_varint::encode::u32(self.multicodec, &mut buf);
+			scratch.extend(encoded_varint);
+		}
+		scratch.extend(&self.pubkey);
 
-	// pub fn deserialize_zero_copy<'de: 'a, D>(deserializer: D) -> Result<Self, D::Error>
-	// where
-	// 	D: Deserializer<'de>,
-	// {
-	// 	let s: &str = Deserialize::deserialize(deserializer)?;
-	//
-	// 	DidKey::try_from(s).map_err(serde::de::Error::custom)
-	// }
+		bs58::encode::EncodeBuilder::new(scratch, bs58::Alphabet::BITCOIN)
+			.onto(out)
+			.expect("infallible");
+	}
 }
 
-impl TryFrom<String> for DidKey {
-	type Error = TryFromStrErr;
-
-	fn try_from(value: String) -> Result<Self, Self::Error> {
-		if !value.starts_with(Self::PREFIX) {
-			return Err(TryFromStrErr::WrongPrefix);
-		}
-
-		Ok(Self(value))
-	}
+#[derive(Debug, thiserror::Error, Eq, PartialEq, Clone)]
+pub enum TryFromStrErr {
+	#[error("string did not start with `did:key:z`")]
+	WrongPrefix,
+	#[error("string was not base58-btc encoded: {0}")]
+	NotBase58Btc(#[from] bs58::decode::Error),
+	#[error("failed to decode varint for pubkey type: {0}")]
+	Varint(#[from] unsigned_varint::decode::Error),
 }
 
 impl FromStr for DidKey {
 	type Err = TryFromStrErr;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		s.to_owned().try_into()
+		let Some(suffix) = s.strip_prefix(Self::PREFIX) else {
+			return Err(TryFromStrErr::WrongPrefix);
+		};
+		let decoded = bs58::decode(suffix).into_vec()?;
+		let (multicodec, pubkey) = unsigned_varint::decode::u32(&decoded)?;
+
+		// PERF: maybe we can reuse the buffer of `decoded` to be more efficient than
+		// a clone
+		Ok(Self {
+			multicodec,
+			pubkey: pubkey.to_owned(),
+		})
+	}
+}
+
+impl Display for DidKey {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let mut out = String::new();
+		let mut scratch = Vec::new();
+		self.to_str(&mut scratch, &mut out);
+
+		f.write_str(&out)
 	}
 }
 
@@ -70,30 +90,47 @@ impl<'de> Deserialize<'de> for DidKey {
 		D: serde::Deserializer<'de>,
 	{
 		let s = String::deserialize(deserializer)?;
-		s.try_into().map_err(serde::de::Error::custom)
+		s.parse().map_err(serde::de::Error::custom)
 	}
 }
 
-impl<T: AsRef<str>> PartialEq<T> for DidKey {
-	fn eq(&self, other: &T) -> bool {
-		self.0 == other.as_ref()
+impl Serialize for DidKey {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: serde::Serializer,
+	{
+		serializer.serialize_str(&format!("{self}"))
 	}
 }
 
-#[derive(Debug, thiserror::Error, Eq, PartialEq, Clone)]
-pub enum TryFromStrErr {
-	#[error("string did not start with `did:key:z`")]
-	WrongPrefix,
+#[derive(
+	Debug,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	Hash,
+	Ord,
+	PartialOrd,
+	derive_more::Deref,
+	derive_more::DerefMut,
+	derive_more::From,
+	derive_more::Into,
+)]
+#[repr(transparent)]
+pub struct KnownMultikeys(pub u32);
+
+impl KnownMultikeys {
+	pub const ED25519_PUB: Self = Self(0xED);
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
-	use std::sync::LazyLock;
-
-	use color_eyre::eyre::Context;
-	use hex_literal::hex;
-
+mod test {
 	use super::*;
+
+	use color_eyre::eyre::WrapErr as _;
+	use hex_literal::hex;
+	use std::sync::LazyLock;
 
 	// From https://datatracker.ietf.org/doc/html/rfc8032#section-7.1
 	pub static ED25519_EXAMPLES: LazyLock<Vec<ed25519_dalek::SigningKey>> =
@@ -148,70 +185,88 @@ pub(crate) mod tests {
 				.collect()
 		});
 
+	const DID_KEY_EXAMPLES: &[&str] = &[
+		"did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw", // Test1
+		"did:key:z6MkiaMbhXHNA4eJVCCj8dbzKzTgYDKf6crKgHVHid1F1WCT", // Test2
+		"did:key:z6MkwSD8dBdqcXQzKJZQFPy2hh2izzxskndKCjdmC2dBpfME", // Test3
+		"did:key:z6Mkh7U7jBwoMro3UeHmXes4tKtFbZhMRWejbtunbU4hhvjP", // Test1024
+		"did:key:z6MkvLrkgkeeWeRwktZGShYPiB5YuPkhN2yi3MqMKZMFMgWr", // TestSha
+	];
+
 	#[test]
-	fn test_ed25519_examples() {
-		let _examples = &*ED25519_EXAMPLES;
-	}
+	fn test_ed25519_round_trip() {
+		// Arrange
+		struct Example {
+			dalek: ed25519_dalek::VerifyingKey,
+			serialized: String,
+		}
+		let examples: Vec<Example> = ED25519_EXAMPLES
+			.iter()
+			.zip(DID_KEY_EXAMPLES)
+			.map(|(dalek, serialized)| {
+				let dalek = dalek.verifying_key();
 
-	const GOOD_ED25519: &str =
-		"did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp";
+				Example {
+					dalek,
+					serialized: serialized.to_string(),
+				}
+			})
+			.collect();
 
-	#[test]
-	fn test_round_trip() {
-		let raw = GOOD_ED25519;
-		let parsed: DidKey =
-			raw.parse().expect("key is valid so parsing should succeed");
-		let tried: DidKey = raw
-			.to_owned()
-			.try_into()
-			.expect("key is valid so parsing should succeed");
+		// Act + Assert
+		let mut sbuf = String::new();
+		let mut scratch = Vec::new();
+		for Example { dalek, serialized } in examples {
+			let deserialized = DidKey::from_str(&serialized)
+				.expect("all are valid keys so they should deserialize");
 
-		// compare to str
-		assert_eq!(parsed, raw);
-		assert_eq!(tried, raw);
+			assert_eq!(
+				deserialized,
+				DidKey {
+					multicodec: 0xED,
+					pubkey: dalek.as_bytes().to_vec()
+				},
+				"deserialization didn't match expected value"
+			);
 
-		// compare to Self
-		assert_eq!(parsed, tried);
+			deserialized.to_str(&mut scratch, &mut sbuf);
+			assert_eq!(
+				sbuf, serialized,
+				"serialization via `to_str` didn't match expected value"
+			);
+			assert_eq!(
+				format!("{deserialized}"),
+				serialized,
+				"serialization via `Display` didn't match expected value"
+			);
+		}
 	}
 
 	#[test]
 	fn test_invalid_multibase_prefix_fails() {
 		let bad = "did:key:q";
 		let parsed = DidKey::from_str(bad);
-		let tried = DidKey::try_from(bad.to_owned());
 		let expected = Err(TryFromStrErr::WrongPrefix);
 
 		assert_eq!(parsed, expected);
-		assert_eq!(tried, expected);
 	}
 
 	#[test]
 	fn test_invalid_method_prefix_fails() {
 		let bad = "did:foo:z";
 		let parsed = DidKey::from_str(bad);
-		let tried = DidKey::try_from(bad.to_owned());
 		let expected = Err(TryFromStrErr::WrongPrefix);
 
 		assert_eq!(parsed, expected);
-		assert_eq!(tried, expected);
 	}
 
 	#[test]
 	fn test_empty_str_fails() {
 		let bad = "";
 		let parsed = DidKey::from_str(bad);
-		let tried = DidKey::try_from(bad.to_owned());
 		let expected = Err(TryFromStrErr::WrongPrefix);
 
 		assert_eq!(parsed, expected);
-		assert_eq!(tried, expected);
-	}
-
-	#[test]
-	fn test_display() {
-		let key: DidKey = DidKey::from_str(GOOD_ED25519).unwrap();
-		assert_eq!(GOOD_ED25519, key.0);
-		assert_eq!(GOOD_ED25519, format!("{key}"));
 	}
 
 	#[test]
@@ -223,10 +278,10 @@ pub(crate) mod tests {
 		}
 
 		let original_deserialized = S {
-			field: GOOD_ED25519.parse().unwrap(),
+			field: DID_KEY_EXAMPLES[0].parse().unwrap(),
 		};
 		let original_serialized = serde_json::json!({
-			"field": GOOD_ED25519,
+			"field": DID_KEY_EXAMPLES[0],
 		});
 
 		let deserialized: S = serde_json::from_value(original_serialized.clone())
