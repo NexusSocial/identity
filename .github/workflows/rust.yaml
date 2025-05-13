@@ -51,14 +51,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4.2.0
-    - uses: EmbarkStudios/cargo-deny-action@v2.0.1
+    - uses: EmbarkStudios/cargo-deny-action@v2.0.11
 
   build:
     name: Build Binaries
     env:
-      LINUX: x86_64-unknown-linux-musl 
-      LINUX_ARM: aarch64-unknown-linux-musl 
-      WINDOWS: x86_64-pc-windows-gnu 
+      LINUX: x86_64-unknown-linux-musl
+      LINUX_ARM: aarch64-unknown-linux-musl
+      WINDOWS: x86_64-pc-windows-gnu
       MACOS: aarch64-apple-darwin
     # We run the jobs with a matrix, because currently we don't support cross
     # compilation to macos unless your'e already on macos. And mac runners are
@@ -85,7 +85,7 @@ jobs:
         run: cargo install --locked cargo-zigbuild@0.19.3
 
       - name: |
-          Configure cross compilation targets for runner 
+          Configure cross compilation targets for runner
           ${{ matrix.runner-vars.runs-on }} (${{ matrix.runner-vars.host-triple }})
         run: |
           case "${{ matrix.runner-vars.host-triple }}" in
@@ -115,7 +115,7 @@ jobs:
         run: |
           set -Eeuxo pipefail
           mkdir artifacts
-          # TODO: Make it possible to release *all* binaries in these artifacts, not 
+          # TODO: Make it possible to release *all* binaries in these artifacts, not
           # just the identity-server.
           component="identity-server"
           if [[ "${{ inputs.cargo-profile }}" == "dev" ]]; then
@@ -141,13 +141,13 @@ jobs:
             esac
           done
           ls -aRsh artifacts
-      
+
       - name: Compute sha256 checksums
         run: |
           set -Eeuxo pipefail
           pushd artifacts
           for f in *; do
-            shasum -a 256 "${f}" > "${f}.sha256" 
+            shasum -a 256 "${f}" > "${f}.sha256"
           done
           ls -aRsh
           popd
