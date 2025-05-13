@@ -24,3 +24,5 @@ derive_more = { workspace = true, features = ["display", "as_ref"] }
 [dev-dependencies]
 serde_json.workspace = true
 color-eyre.workspace = true
+hex-literal.workspace = true
+ed25519-dalek.workspace = true
