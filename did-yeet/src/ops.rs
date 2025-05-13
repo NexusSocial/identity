@@ -131,27 +131,3 @@ bitflags! {
 		const RESCIND_CUSTODY = 0b00000010;
 	}
 }
-
-#[cfg(test)]
-mod test {
-	use crate::{did_key::tests::ED25519_EXAMPLES, DidKey};
-
-	use super::*;
-
-	#[test]
-	fn test_serialize_enroll_genesis() {
-		let keys: Vec<DidKey> = ED25519_EXAMPLES
-			.iter()
-			.map(|key| {
-				DidKey::from_base58_btc_encoded(
-					&bs58::encode(ED25519_EXAMPLES[0].verifying_key().as_bytes())
-						.into_string(),
-				)
-			})
-			.collect();
-		let enroll = Enroll {
-			parent: None,
-			dids: BTreeMap::from([]),
-		};
-	}
-}
