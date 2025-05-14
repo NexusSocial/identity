@@ -1,5 +1,4 @@
 pub mod did_key;
-pub mod keychain;
 pub mod ops;
 pub mod signature;
 
