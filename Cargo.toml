@@ -13,7 +13,7 @@ version = "0.0.0"
 license = "MIT-0 OR Apache-2.0"
 repository = "https://github.com/NexusSocial/identity"
 edition = "2021"
-rust-version = "1.86.0"
+rust-version = "1.87.0"
 
 [workspace.dependencies]
 arc-swap = "1.7.1"
