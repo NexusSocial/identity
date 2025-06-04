@@ -1,0 +1,26 @@
+[package]
+name = "did-pkarr-io"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+## Enable talking to the Bittorrent Mainline DHT
+dht = ["pkarr/dht"]
+
+## Enable talking to HTTP based relays
+relays = ["pkarr/relays"]
+
+[dependencies]
+document-features.workspace = true
+
+[dependencies.pkarr]
+version = "3.7.2"
+default-features = false
+features = []
+
+[package.metadata.docs.rs]
+all-features = true
