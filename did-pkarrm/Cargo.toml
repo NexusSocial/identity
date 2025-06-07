@@ -1,5 +1,5 @@
 [package]
-name = "did-pkarr-io"
+name = "did-pkarrm"
 version.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -8,19 +8,14 @@ rust-version.workspace = true
 publish = false
 
 [features]
-## Enable talking to the Bittorrent Mainline DHT
 dht = ["pkarr/dht"]
 
-## Enable talking to HTTP based relays
-relays = ["pkarr/relays"]
-
 [dependencies]
-document-features.workspace = true
-
-[dependencies.pkarr]
-version = "3.7.2"
-default-features = false
-features = []
+base32 = "0.5.1"
+pkarr = { version = "3.7.2", default-features = false, features = ["relays"] }
+bitflags = { version = "2.9.1", default-features = false }
+fluent-uri = "0.3.2"
+thiserror.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
