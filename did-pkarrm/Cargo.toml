@@ -16,6 +16,7 @@ pkarr = { version = "3.7.2", default-features = false, features = ["relays"] }
 bitflags = { version = "2.9.1", default-features = false }
 fluent-uri = "0.3.2"
 thiserror.workspace = true
+eyre.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

@@ -888,6 +888,7 @@ version = "0.0.0"
 dependencies = [
  "base32",
  "bitflags",
+ "eyre",
  "fluent-uri",
  "pkarr",
  "thiserror 1.0.69",

@@ -1,4 +1,8 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+	collections::{BTreeMap, HashMap, HashSet},
+	num::ParseIntError,
+	str::FromStr,
+};
 
 use bitflags::bitflags;
 use fluent_uri::Uri;
@@ -6,6 +10,7 @@ use pkarr::dns::rdata::TXT;
 
 /// A verification method most typically is a public key (via `did:key`), or a Did Url
 /// that links to a verification method in a different Did Document.
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum VerificationMethod {
 	/// A `did:key`. This does not include the fragment suffix, to save space.
 	DidKey(Did),
@@ -23,18 +28,51 @@ impl FromStr for VerificationMethod {
 	type Err = ParseVerificationMethodErr;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let uri: Uri<String> = Uri::from_str(s)?;
+		let uri: Uri<String> = Uri::try_from(s.to_owned())?;
 		let did = Did::try_from(uri)?;
 		Ok(Self::from(did))
 	}
 }
 
-impl From<Did> for VerificationMethod {
-	fn from(_value: Did) -> Self {
-		todo!()
+impl TryFrom<String> for VerificationMethod {
+	type Error = ParseVerificationMethodErr;
+
+	fn try_from(value: String) -> Result<Self, Self::Error> {
+		let uri: Uri<String> = Uri::try_from(value)?;
+		let did = Did::try_from(uri)?;
+
+		Ok(Self::from(did))
 	}
 }
 
+impl From<Did> for VerificationMethod {
+	fn from(value: Did) -> Self {
+		let (prefix, _suffix) = value
+			.0
+			.path()
+			.split_once(':')
+			.expect("already checked for did: prefix");
+
+		if prefix == "key" {
+			Self::DidKey(value)
+		} else {
+			Self::DidUrl(value)
+		}
+	}
+}
+
+impl<T: AsRef<str>> PartialEq<T> for VerificationMethod {
+	fn eq(&self, other: &T) -> bool {
+		let did = match self {
+			VerificationMethod::DidKey(did) => did,
+			VerificationMethod::DidUrl(did) => did,
+		};
+
+		did == other
+	}
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Did(Uri<String>);
 
 impl Did {
@@ -45,22 +83,32 @@ impl Did {
 
 #[derive(Debug, thiserror::Error)]
 pub enum DidFromUriErr {
-	#[error("did not start with did:")]
+	#[error("did not start with `did:`")]
 	WrongPrefix,
 }
 
 impl TryFrom<Uri<String>> for Did {
 	type Error = DidFromUriErr;
 
-	fn try_from(_value: Uri<String>) -> Result<Self, Self::Error> {
-		todo!()
+	fn try_from(value: Uri<String>) -> Result<Self, Self::Error> {
+		if value.scheme().as_str() == "did" && value.authority().is_none() {
+			Ok(Self(value))
+		} else {
+			Err(DidFromUriErr::WrongPrefix)
+		}
+	}
+}
+
+impl<T: AsRef<str>> PartialEq<T> for Did {
+	fn eq(&self, other: &T) -> bool {
+		self.0 == other.as_ref()
 	}
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseVerificationMethodErr {
-	#[error("not a uri: {0}")]
-	NotAUri(#[from] fluent_uri::error::ParseError),
+	#[error("not a uri")]
+	NotAUri(#[from] fluent_uri::error::ParseError<String>),
 	#[error("did not start with did:")]
 	NotADid(#[from] DidFromUriErr),
 }
@@ -92,6 +140,7 @@ bitflags! {
 	/// This means that even though the verification relationship is *specified* as a
 	/// varint, this implementation of did:pkarrm can disregard this and just directly
 	/// encode as a u8 bitflags.
+	#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 	pub struct VerificationRelationship: u8 {
 		/// <https://www.w3.org/TR/cid-1.0/#authentication>
 		const Authentication = (1 << 0);
@@ -136,52 +185,138 @@ pub struct DidDocumentContents {
 pub enum FromTxtRecordErr {
 	#[error("encountered too many attributes")]
 	TooManyAttrs,
-	#[error("failed to extract fields from attributes: {0}")]
+	#[error("failed to extract fields from attributes")]
 	AttrsToFields(#[from] AttrsToFieldsErr),
-	#[error("failed to parse aka string: {0}")]
-	AkaParseErr(fluent_uri::error::ParseError),
-	#[error("failed to parse vm string: {0}")]
+	#[error("failed to parse aka string")]
+	AkaParseErr(#[from] fluent_uri::error::ParseError<String>),
+	#[error("failed to parse vm string")]
 	VmParseErr(#[from] ParseVerificationMethodErr),
-	#[error("failed to parse vr string: {0}")]
+	#[error("failed to parse vr string")]
 	VrParseErr(#[from] ParseVerificationRelationshipErr),
+	#[error("failed to decode verification relationship using base32z")]
+	VrNotB32z,
+	#[error("failed to assemble attrs into lists")]
+	ListAssembly(#[from] ListAssemblyErr),
 }
 
 impl TryFrom<TXT<'_>> for DidDocumentContents {
 	type Error = FromTxtRecordErr;
 
 	fn try_from(value: TXT<'_>) -> Result<Self, Self::Error> {
-		let attrs = value.attributes();
+		let mut attrs = value.attributes();
 		if attrs.len() >= usize::from(u8::MAX) {
 			return Err(FromTxtRecordErr::TooManyAttrs);
 		}
-		let fields = attrs_to_fields(&attrs)?;
 
-		let aka: Result<Vec<Uri<String>>, _> = fields
-			.aka
-			.into_iter()
-			.map(|s: &str| Uri::from_str(s).map_err(FromTxtRecordErr::AkaParseErr))
-			.collect();
+		let mut novalue = HashSet::new();
+		let mut singleton = HashMap::new();
+		let mut varlen = HashMap::new();
+		assemble_into_lists(&mut attrs, &mut novalue, &mut singleton, &mut varlen)?;
+
+		let aka: Vec<String> = varlen.remove("aka").unwrap_or_default();
+		let aka: Result<Vec<Uri<String>>, _> =
+			aka.into_iter().map(Uri::try_from).collect();
 		let aka = aka?;
-		let vm: Result<Vec<VerificationMethod>, _> = fields
-			.vm
-			.into_iter()
-			.map(|s: &str| {
-				VerificationMethod::from_str(s).map_err(FromTxtRecordErr::VmParseErr)
-			})
-			.collect();
+
+		let vm: Vec<String> = varlen.remove("vm").unwrap_or_default();
+		let vm: Result<Vec<VerificationMethod>, _> =
+			vm.into_iter().map(VerificationMethod::try_from).collect();
 		let vm = vm?;
-		let vr: Result<Vec<VerificationRelationship>, _> = fields
-			.vr
+
+		let vr: String = singleton.remove("vr").unwrap_or_default();
+		let vr: Vec<VerificationRelationship> = b32z_decode(&vr)
+			.map_err(|()| FromTxtRecordErr::VrNotB32z)?
 			.into_iter()
-			.map(|s: &str| {
-				VerificationRelationship::from_str(s)
-					.map_err(FromTxtRecordErr::VrParseErr)
-			})
+			.map(VerificationRelationship::from_bits_truncate)
 			.collect();
-		let vr = vr?;
 
 		Ok(Self { aka, vm, vr })
 	}
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+pub enum ListAssemblyErr {
+	#[error("key suffix could not be parsed into a u8")]
+	KeySuffixNotU8(#[from] ParseIntError),
+	#[error("skipped an index for the keys")]
+	SkippedIndex,
+	#[error("index was encountered twice for same key")]
+	DuplicateIndex,
+}
+
+/// Pops any attrs in the format key0=a, key1=b, and turns them into key=[a,b], and
+/// moves them into `out_varlen`.
+///
+/// Attrs in the form key=a are moved into `out_singleton`.
+///
+/// Attrs with no value are moved into `out_novalue`.
+///
+/// `attrs` should be fully drained at the end of it, but with its original capacity.
+///
+/// `scratch` is just scratch space, to avoid needing to reallocate.
+fn assemble_into_lists(
+	attrs: &mut HashMap<String, Option<String>>,
+	out_novalue: &mut HashSet<String>,
+	out_singleton: &mut HashMap<String, String>,
+	out_varlen: &mut HashMap<String, Vec<String>>,
+) -> Result<(), ListAssemblyErr> {
+	out_novalue.clear();
+	out_singleton.clear();
+	out_varlen.clear();
+
+	// Hopefully this steals the buffer to reuse it
+	let mut out_varlen_wip: HashMap<String, BTreeMap<u8, String>> =
+		std::mem::take(out_varlen)
+			.into_keys()
+			.map(|k| (k, BTreeMap::new()))
+			.collect();
+
+	for (mut k, v) in attrs.drain() {
+		let Some(v) = v else {
+			out_novalue.insert(k);
+			continue;
+		};
+		let (prefix, suffix_num) = split_off_number(&k)?;
+		let Some(suffix_num) = suffix_num else {
+			out_singleton.insert(k, v);
+			continue;
+		};
+		k.truncate(prefix.len()); // truncate to only prefix
+		let values = out_varlen_wip.entry(k).or_default();
+		let already_exists = values.insert(suffix_num, v).is_some();
+		if already_exists {
+			return Err(ListAssemblyErr::DuplicateIndex);
+		}
+	}
+
+	// now collapse the varlen
+	let out_varlen_wip: Result<HashMap<String, Vec<String>>, ListAssemblyErr> =
+		out_varlen_wip
+			.into_iter()
+			.map(|(k, bt)| {
+				let mut vec: Vec<String> = Vec::new();
+				for (i, v) in bt {
+					if usize::from(i) != vec.len() {
+						return Err(ListAssemblyErr::SkippedIndex);
+					}
+					vec.push(v);
+				}
+				Ok((k, vec))
+			})
+			.collect();
+	*out_varlen = out_varlen_wip?;
+
+	Ok(())
+}
+
+fn split_off_number(s: &str) -> Result<(&str, Option<u8>), std::num::ParseIntError> {
+	let Some(first_digit) = s.find(|ch: char| ch.is_ascii_digit()) else {
+		return Ok((s, None));
+	};
+	let (prefix, suffix) = s.split_at(first_digit);
+	let num: u8 = suffix.parse()?;
+
+	Ok((prefix, Some(num)))
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -191,126 +326,84 @@ pub enum Field {
 	Vr,
 }
 
-/// The index in the field's vec
-struct FieldIdx(u8);
-
 #[derive(Debug, thiserror::Error)]
 pub enum ParseKeyErr {
-	#[error("key suffix was not a u8: {0}")]
+	#[error("key suffix was not a u8")]
 	SuffixNotANumber(#[from] std::num::ParseIntError),
 	#[error("unknown attribute key")]
 	UnknownKey,
-}
-
-fn parse_field_from_key(key: &str) -> Result<(Field, FieldIdx), ParseKeyErr> {
-	let (field, suffix) = if let Some(suffix) = key.strip_prefix("aka") {
-		(Field::Aka, suffix)
-	} else if let Some(suffix) = key.strip_prefix("vm") {
-		(Field::Vm, suffix)
-	} else if let Some(suffix) = key.strip_prefix("vr") {
-		(Field::Vr, suffix)
-	} else {
-		return Err(ParseKeyErr::UnknownKey);
-	};
-
-	let idx: u8 = suffix.parse()?;
-	Ok((field, FieldIdx(idx)))
-}
-
-/// The sum of a arithmetic sequence of numbers:
-/// `0, 1, 2, .. N`
-///
-/// It is equal to:
-/// `len(sequence) * (min(sequence) + max(sequence)) / 2`
-/// aka `(N + 1)*N/2`
-fn arithmetic_series(max: u8) -> u16 {
-	// because we start at 0, we add 1 to the max to get the length of the sequence
-	let count = u16::from(max) + 1;
-	count
-		.checked_mul(u16::from(max))
-		.unwrap()
-		.checked_div(2)
-		.unwrap()
-}
-
-#[derive(Default)]
-struct Fields<T> {
-	aka: T,
-	vm: T,
-	vr: T,
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum AttrsToFieldsErr {
 	#[error("attribute value was empty string or not present")]
 	EmptyVal,
-	#[error("failed to parse attribute key: {0}")]
+	#[error("failed to parse attribute key")]
 	ParseKey(#[from] ParseKeyErr),
 	#[error("skipped an index for field {0:?}")]
 	SkippedAttrIdx(Field),
+	#[error("value for field {0:?} was not base32-z")]
+	ValueNotBase32(Field),
 }
 
-// Get ready for the most overengineered code ever...
-fn attrs_to_fields(
-	attrs: &HashMap<String, Option<String>>,
-) -> Result<Fields<Vec<&str>>, AttrsToFieldsErr> {
-	// We can detect gaps without allocating by ensuring that the sum of all keys
-	// is equal to len(seq)*max(seq)/2 and that min(seq) == 0.
-	//
-	// (this is just the formula for a finite arithmetic series)
-	#[derive(Default)]
-	struct Stats {
-		max: u8,
-		min: u8,
-		sum: u16,
-		count: u8,
-	}
-	impl Stats {
-		fn was_index_skipped(&self) -> bool {
-			self.min != 0
-				|| self.count != (self.max + 1)
-				|| self.sum != arithmetic_series(self.max)
-		}
-	}
-
-	let mut fstats: Fields<Stats> = Default::default();
-	let mut fvalues: Fields<Vec<&str>> = Default::default();
-	for (k, v) in attrs.iter() {
-		let v = v.as_deref().unwrap_or_default();
-		if v.is_empty() {
-			return Err(AttrsToFieldsErr::EmptyVal);
-		}
-
-		let (field, idx) = parse_field_from_key(k)?;
-		let (stats, values) = match field {
-			Field::Aka => (&mut fstats.aka, &mut fvalues.aka),
-			Field::Vm => (&mut fstats.vm, &mut fvalues.vm),
-			Field::Vr => (&mut fstats.vr, &mut fvalues.vr),
-		};
-		stats.max = u8::max(stats.max, idx.0);
-		stats.min = u8::min(stats.min, idx.0);
-		stats.sum += u16::from(idx.0);
-		stats.count += 1;
-		values.resize(stats.count.into(), ""); // guarantees next command wont fail
-		values[usize::from(idx.0)] = v;
-	}
-
-	if fstats.aka.was_index_skipped() {
-		return Err(AttrsToFieldsErr::SkippedAttrIdx(Field::Aka));
-	}
-	if fstats.vm.was_index_skipped() {
-		return Err(AttrsToFieldsErr::SkippedAttrIdx(Field::Vm));
-	}
-	if fstats.vr.was_index_skipped() {
-		return Err(AttrsToFieldsErr::SkippedAttrIdx(Field::Vr));
-	}
-	// sanity: we already ensured there are no holes
-	debug_assert!(!fvalues.aka.iter().any(|s| s.is_empty()), "sanity");
-	debug_assert!(!fvalues.vm.iter().any(|s| s.is_empty()), "sanity");
-	debug_assert!(!fvalues.vr.iter().any(|s| s.is_empty()), "sanity");
-
-	Ok(fvalues)
+fn b32z_decode(s: &str) -> Result<Vec<u8>, ()> {
+	base32::decode(base32::Alphabet::Z, s).ok_or(())
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+	use eyre::Context;
+
+	use super::*;
+
+	fn b32z(data: &[u8]) -> String {
+		base32::encode(base32::Alphabet::Z, data)
+	}
+
+	fn make_txt_record<'a, AKA, VM>(aka: AKA, vm: VM, vr: &str) -> TXT<'static>
+	where
+		AKA: IntoIterator<Item = &'a str>,
+		VM: IntoIterator<Item = &'a str>,
+	{
+		let mut txt = TXT::new();
+		for (i, s) in aka.into_iter().enumerate() {
+			let cs = format!("aka{i}={s}").try_into().unwrap();
+			txt.add_char_string(cs);
+		}
+		for (i, s) in vm.into_iter().enumerate() {
+			let cs = format!("vm{i}={s}").try_into().unwrap();
+			txt.add_char_string(cs);
+		}
+		let cs = format!("vr={vr}").try_into().unwrap();
+		txt.add_char_string(cs);
+
+		txt
+	}
+
+	#[test]
+	fn test_txt_record_conversion() -> eyre::Result<()> {
+		// Arrange
+		let aka0 = "at://atproto.com";
+		let vm0 = "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw";
+		let vr0 = VerificationRelationship::Authentication;
+		let txt = make_txt_record([aka0], [vm0], &b32z(&[vr0.bits()]));
+
+		// Sanity checks
+		let attrs = dbg!(txt.attributes());
+		assert_eq!(attrs["aka0"].as_deref(), Some(aka0));
+		assert_eq!(attrs["vm0"].as_deref(), Some(vm0));
+		assert_eq!(b32z_decode(attrs["vr"].as_ref().unwrap()).unwrap(), &[0x1]);
+
+		// Act
+		let doc: DidDocumentContents = txt
+			.try_into()
+			.wrap_err("error while converting TXT record to DID document contents")?;
+
+		// Assert
+		assert_eq!(doc.aka, [aka0]);
+		assert_eq!(doc.vm, [vm0]);
+		assert_eq!(doc.vr, [vr0]);
+
+		Ok(())
+	}
+}
