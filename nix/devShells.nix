@@ -33,6 +33,8 @@ in
     ] ++ [
       rustToolchain
       rustPlatform.bindgenHook
+      # Fixes https://github.com/rust-cross/cargo-zigbuild/issues/343#issuecomment-2957759839
+      pkgs.pkgsCross.mingwW64.buildPackages.bintools
       # fenix.packages.${system}.rust-analyzer
     ];
 
