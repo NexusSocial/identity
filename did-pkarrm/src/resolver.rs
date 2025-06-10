@@ -153,15 +153,8 @@ bitflags! {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseVerificationRelationshipErr {
-	//TODO
-}
-
-impl FromStr for VerificationRelationship {
-	type Err = ParseVerificationRelationshipErr;
-
-	fn from_str(_s: &str) -> Result<Self, Self::Err> {
-		todo!()
-	}
+	#[error("failed to decode verification relationship using base32z")]
+	VrNotB32z,
 }
 
 /// Everything in a did:pkarrm's Did Document except the `id` field. A
@@ -185,19 +178,19 @@ pub struct DidDocumentContents {
 pub enum FromTxtRecordErr {
 	#[error("encountered too many attributes")]
 	TooManyAttrs,
-	#[error("failed to extract fields from attributes")]
-	AttrsToFields(#[from] AttrsToFieldsErr),
 	#[error("failed to parse aka string")]
-	AkaParseErr(#[from] fluent_uri::error::ParseError<String>),
+	AkaParseErr(#[from] ParseAlsoKnownAsErr),
 	#[error("failed to parse vm string")]
 	VmParseErr(#[from] ParseVerificationMethodErr),
 	#[error("failed to parse vr string")]
 	VrParseErr(#[from] ParseVerificationRelationshipErr),
-	#[error("failed to decode verification relationship using base32z")]
-	VrNotB32z,
 	#[error("failed to assemble attrs into lists")]
 	ListAssembly(#[from] ListAssemblyErr),
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct ParseAlsoKnownAsErr(#[from] fluent_uri::error::ParseError<String>);
 
 impl TryFrom<TXT<'_>> for DidDocumentContents {
 	type Error = FromTxtRecordErr;
@@ -216,7 +209,7 @@ impl TryFrom<TXT<'_>> for DidDocumentContents {
 		let aka: Vec<String> = varlen.remove("aka").unwrap_or_default();
 		let aka: Result<Vec<Uri<String>>, _> =
 			aka.into_iter().map(Uri::try_from).collect();
-		let aka = aka?;
+		let aka = aka.map_err(ParseAlsoKnownAsErr)?;
 
 		let vm: Vec<String> = varlen.remove("vm").unwrap_or_default();
 		let vm: Result<Vec<VerificationMethod>, _> =
@@ -225,7 +218,7 @@ impl TryFrom<TXT<'_>> for DidDocumentContents {
 
 		let vr: String = singleton.remove("vr").unwrap_or_default();
 		let vr: Vec<VerificationRelationship> = b32z_decode(&vr)
-			.map_err(|()| FromTxtRecordErr::VrNotB32z)?
+			.map_err(|()| ParseVerificationRelationshipErr::VrNotB32z)?
 			.into_iter()
 			.map(VerificationRelationship::from_bits_truncate)
 			.collect();
@@ -317,33 +310,6 @@ fn split_off_number(s: &str) -> Result<(&str, Option<u8>), std::num::ParseIntErr
 	let num: u8 = suffix.parse()?;
 
 	Ok((prefix, Some(num)))
-}
-
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
-pub enum Field {
-	Aka,
-	Vm,
-	Vr,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ParseKeyErr {
-	#[error("key suffix was not a u8")]
-	SuffixNotANumber(#[from] std::num::ParseIntError),
-	#[error("unknown attribute key")]
-	UnknownKey,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum AttrsToFieldsErr {
-	#[error("attribute value was empty string or not present")]
-	EmptyVal,
-	#[error("failed to parse attribute key")]
-	ParseKey(#[from] ParseKeyErr),
-	#[error("skipped an index for field {0:?}")]
-	SkippedAttrIdx(Field),
-	#[error("value for field {0:?} was not base32-z")]
-	ValueNotBase32(Field),
 }
 
 fn b32z_decode(s: &str) -> Result<Vec<u8>, ()> {
