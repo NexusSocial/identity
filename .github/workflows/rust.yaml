@@ -82,7 +82,7 @@ jobs:
         uses: Swatinem/rust-cache@v2.7.3
 
       - name: Install mingw while cargo-zigbuild is broken
-        if: ${{ startsWith(matrix.runner-vars.runs_on, 'ubuntu') }}
+        if: startsWith(matrix.runner-vars.runs-on, 'ubuntu')
         # https://github.com/rust-cross/cargo-zigbuild/issues/343#issuecomment-2957759839
         run: rustup component add rust-mingw
       - name: Install cargo-zigbuild
