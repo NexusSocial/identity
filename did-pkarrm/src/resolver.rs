@@ -237,8 +237,8 @@ pub enum ListAssemblyErr {
 	DuplicateIndex,
 }
 
-/// Pops any attrs in the format key0=a, key1=b, and turns them into key=[a,b], and
-/// moves them into `out_varlen`.
+/// Pops any attrs in the format `key0=a`, `key1=b`, and turns them into `key=[a,b]`,
+/// and moves them into `out_varlen`.
 ///
 /// Attrs in the form key=a are moved into `out_singleton`.
 ///
