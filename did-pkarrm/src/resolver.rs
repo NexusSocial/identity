@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use bitflags::bitflags;
 use fluent_uri::Uri;
-use pkarr::{dns::rdata::TXT, SignedPacket};
+use pkarr::dns::rdata::TXT;
 
 /// A verification method most typically is a public key (via `did:key`), or a Did Url
 /// that links to a verification method in a different Did Document.
@@ -30,12 +30,18 @@ impl FromStr for VerificationMethod {
 }
 
 impl From<Did> for VerificationMethod {
-	fn from(value: Did) -> Self {
+	fn from(_value: Did) -> Self {
 		todo!()
 	}
 }
 
 pub struct Did(Uri<String>);
+
+impl Did {
+	pub fn as_uri(&self) -> &Uri<String> {
+		&self.0
+	}
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum DidFromUriErr {
@@ -46,7 +52,7 @@ pub enum DidFromUriErr {
 impl TryFrom<Uri<String>> for Did {
 	type Error = DidFromUriErr;
 
-	fn try_from(value: Uri<String>) -> Result<Self, Self::Error> {
+	fn try_from(_value: Uri<String>) -> Result<Self, Self::Error> {
 		todo!()
 	}
 }
@@ -104,7 +110,7 @@ pub enum ParseVerificationRelationshipErr {
 impl FromStr for VerificationRelationship {
 	type Err = ParseVerificationRelationshipErr;
 
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
+	fn from_str(_s: &str) -> Result<Self, Self::Err> {
 		todo!()
 	}
 }
@@ -113,7 +119,7 @@ impl FromStr for VerificationRelationship {
 /// `DidDocumentContents` can be mapped 1:1 to a DNS txt record, for use in PKARR.
 ///
 /// The generics are simply to enable borrowed data, they can be `&str` or `String`.
-/// See [fluent_uri](fluent_uri) for more info.
+/// See [fluent_uri] for more info.
 pub struct DidDocumentContents {
 	/// "Also Known As". A list of alternative aliases for the user.
 	/// <https://www.w3.org/TR/cid-1.0/#also-known-as>
@@ -153,17 +159,14 @@ impl TryFrom<TXT<'_>> for DidDocumentContents {
 		let aka: Result<Vec<Uri<String>>, _> = fields
 			.aka
 			.into_iter()
-			.map(|s: &str| {
-				Uri::from_str(s).map_err(|e| FromTxtRecordErr::AkaParseErr(e))
-			})
+			.map(|s: &str| Uri::from_str(s).map_err(FromTxtRecordErr::AkaParseErr))
 			.collect();
 		let aka = aka?;
 		let vm: Result<Vec<VerificationMethod>, _> = fields
 			.vm
 			.into_iter()
 			.map(|s: &str| {
-				VerificationMethod::from_str(s)
-					.map_err(|e| FromTxtRecordErr::VmParseErr(e))
+				VerificationMethod::from_str(s).map_err(FromTxtRecordErr::VmParseErr)
 			})
 			.collect();
 		let vm = vm?;
@@ -172,7 +175,7 @@ impl TryFrom<TXT<'_>> for DidDocumentContents {
 			.into_iter()
 			.map(|s: &str| {
 				VerificationRelationship::from_str(s)
-					.map_err(|e| FromTxtRecordErr::VrParseErr(e))
+					.map_err(FromTxtRecordErr::VrParseErr)
 			})
 			.collect();
 		let vr = vr?;
@@ -308,3 +311,6 @@ fn attrs_to_fields(
 
 	Ok(fvalues)
 }
+
+#[cfg(test)]
+mod test {}
