@@ -1,0 +1,22 @@
+[package]
+name = "did-pkarrm"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+dht = ["pkarr/dht"]
+
+[dependencies]
+base32 = "0.5.1"
+pkarr = { version = "3.7.2", default-features = false, features = ["relays"] }
+bitflags = { version = "2.9.1", default-features = false }
+fluent-uri = "0.3.2"
+thiserror.workspace = true
+eyre.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true

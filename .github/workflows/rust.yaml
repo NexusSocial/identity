@@ -75,12 +75,16 @@ jobs:
     runs-on: ${{ matrix.runner-vars.runs-on }}
     steps:
       - uses: actions/checkout@v4.2.0
-      - uses: mlugg/setup-zig@v1.2.1
+      - uses: mlugg/setup-zig@v2.0.1
         with:
           version: 0.13.0
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2.7.3
 
+      - name: Install mingw while cargo-zigbuild is broken
+        if: startsWith(matrix.runner-vars.runs-on, 'ubuntu')
+        # https://github.com/rust-cross/cargo-zigbuild/issues/343#issuecomment-2957759839
+        run: sudo apt-get install -y gcc-mingw-w64-x86-64
       - name: Install cargo-zigbuild
         run: cargo install --locked cargo-zigbuild@0.19.3
 
