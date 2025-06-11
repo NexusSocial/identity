@@ -84,7 +84,7 @@ jobs:
       - name: Install mingw while cargo-zigbuild is broken
         if: startsWith(matrix.runner-vars.runs-on, 'ubuntu')
         # https://github.com/rust-cross/cargo-zigbuild/issues/343#issuecomment-2957759839
-        run: rustup component add rust-mingw
+        run: sudo apt-get install -y gcc-mingw-w64-x86-64
       - name: Install cargo-zigbuild
         run: cargo install --locked cargo-zigbuild@0.19.3
 
