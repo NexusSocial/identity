@@ -16,6 +16,18 @@ impl Did {
 	pub fn as_uri(&self) -> &Uri<String> {
 		&self.uri
 	}
+
+	/// Gets the method in `did:<method>:<method-specific-id>`
+	pub fn method(&self) -> &str {
+		&self.uri.as_str()[self.method.clone()]
+	}
+
+	/// Gets the method specific identifier in `did:<method>:<method-specific-id>`
+	/// TODO: Currently reports fragment but this is wrong.
+	pub fn method_specific_id(&self) -> &str {
+		let suffix = (self.method.end + 1)..;
+		&self.uri.as_str()[suffix]
+	}
 }
 
 impl Display for Did {
@@ -30,6 +42,8 @@ pub enum DidFromUriErr {
 	WrongPrefix,
 	#[error("missing method specific identifier")]
 	MissingMethod,
+	#[error("method specific id was empty")]
+	EmptyMethodSpecificId,
 }
 
 impl TryFrom<Uri<String>> for Did {
@@ -40,9 +54,12 @@ impl TryFrom<Uri<String>> for Did {
 			return Err(DidFromUriErr::WrongPrefix);
 		}
 
-		let Some((method, _id)) = value.path().split_once(':') else {
+		let Some((method, id)) = value.path().split_once(':') else {
 			return Err(DidFromUriErr::MissingMethod);
 		};
+		if id.is_empty() {
+			return Err(DidFromUriErr::EmptyMethodSpecificId);
+		}
 
 		let start = "did:".len();
 		let method_range = start..(start + method.len());
@@ -111,9 +128,15 @@ pub(crate) mod test {
 	}
 
 	#[test]
-	fn test_positive_cases() {
+	fn test_method_specific_parts() {
 		for e in DID_KEY_EXAMPLES {
-			Did::from_str(e).expect(&format!("failed test case {e}"));
+			let did = Did::from_str(e).expect(e);
+			assert_eq!(did.method(), "key", "method was incorrect");
+			assert_eq!(
+				did.method_specific_id(),
+				e.strip_prefix("did:key:").unwrap(),
+				"method specific id was incorrect"
+			)
 		}
 	}
 }

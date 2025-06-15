@@ -98,7 +98,7 @@ mod tests {
 		for e in DID_WEB_EXAMPLES {
 			let did = Did::from_str(e).unwrap();
 			let parsed = VerificationMethod::from_str(e).unwrap();
-			let try_from = VerificationMethod::try_from(did.clone()).unwrap();
+			let try_from = VerificationMethod::from(did.clone());
 			assert_eq!(
 				parsed, try_from,
 				"parsing and try_from were not the same for example {e}"
@@ -109,7 +109,7 @@ mod tests {
 		for e in DID_KEY_EXAMPLES {
 			let did = Did::from_str(e).unwrap();
 			let parsed = VerificationMethod::from_str(e).unwrap();
-			let try_from = VerificationMethod::try_from(did.clone()).unwrap();
+			let try_from = VerificationMethod::from(did.clone());
 			assert_eq!(
 				parsed, try_from,
 				"parsing and try_from were not the same for example {e}"
