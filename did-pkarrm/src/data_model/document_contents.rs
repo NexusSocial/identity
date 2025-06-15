@@ -2,179 +2,19 @@ use std::{
 	collections::{BTreeMap, HashMap, HashSet},
 	fmt::{Display, Write},
 	num::ParseIntError,
-	str::FromStr,
 };
 
 use base64::Engine;
-use bitflags::bitflags;
 use fluent_uri::Uri;
 use pkarr::dns::{rdata::TXT, CharacterString};
 
-/// A verification method most typically is a public key (via `did:key`), or a Did Url
-/// that links to a verification method in a different Did Document.
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub enum VerificationMethod {
-	/// A `did:key`. This does not include the fragment suffix, to save space.
-	DidKey(Did),
-	/// A reference to a verification method in a remote Did Document. Any method other
-	/// than `did:key` can be used.
-	///
-	/// DidUrls allow the use of verification methods that are controlled by third
-	/// parties or with alternative did methods such as did:web. By referencing external
-	/// Dids, users can use more convenient third party services while retaining their
-	/// ability for credible exit.
-	DidUrl(Did),
-}
-
-impl VerificationMethod {
-	pub fn as_did(&self) -> &Did {
-		match self {
-			VerificationMethod::DidKey(did) => did,
-			VerificationMethod::DidUrl(did) => did,
-		}
-	}
-}
-
-impl FromStr for VerificationMethod {
-	type Err = ParseVerificationMethodErr;
-
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let uri: Uri<String> = Uri::try_from(s.to_owned())?;
-		let did = Did::try_from(uri)?;
-		Ok(Self::from(did))
-	}
-}
-
-impl TryFrom<String> for VerificationMethod {
-	type Error = ParseVerificationMethodErr;
-
-	fn try_from(value: String) -> Result<Self, Self::Error> {
-		let uri: Uri<String> = Uri::try_from(value)?;
-		let did = Did::try_from(uri)?;
-
-		Ok(Self::from(did))
-	}
-}
-
-impl From<Did> for VerificationMethod {
-	fn from(value: Did) -> Self {
-		let (prefix, _suffix) = value
-			.0
-			.path()
-			.split_once(':')
-			.expect("already checked for did: prefix");
-
-		if prefix == "key" {
-			Self::DidKey(value)
-		} else {
-			Self::DidUrl(value)
-		}
-	}
-}
-
-impl<T: AsRef<str>> PartialEq<T> for VerificationMethod {
-	fn eq(&self, other: &T) -> bool {
-		self.as_did() == other
-	}
-}
-
-impl Display for VerificationMethod {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", self.as_did())
-	}
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct Did(Uri<String>);
-
-impl Did {
-	pub fn as_uri(&self) -> &Uri<String> {
-		&self.0
-	}
-}
-
-impl Display for Did {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", self.as_uri())
-	}
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum DidFromUriErr {
-	#[error("did not start with `did:`")]
-	WrongPrefix,
-}
-
-impl TryFrom<Uri<String>> for Did {
-	type Error = DidFromUriErr;
-
-	fn try_from(value: Uri<String>) -> Result<Self, Self::Error> {
-		if value.scheme().as_str() == "did" && value.authority().is_none() {
-			Ok(Self(value))
-		} else {
-			Err(DidFromUriErr::WrongPrefix)
-		}
-	}
-}
-
-impl<T: AsRef<str>> PartialEq<T> for Did {
-	fn eq(&self, other: &T) -> bool {
-		self.0 == other.as_ref()
-	}
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ParseVerificationMethodErr {
-	#[error("not a uri")]
-	NotAUri(#[from] fluent_uri::error::ParseError<String>),
-	#[error("did not start with did:")]
-	NotADid(#[from] DidFromUriErr),
-}
-
-bitflags! {
-	/// Verification relationships are represented as a bitset(*).
-	///
-	/// # What is a verification relationship?
-	///
-	/// A verification relationship dictates how a particular [`VerificationMethod`].
-	/// Can be used.
-	///
-	/// See also:
-	/// - <https://www.w3.org/TR/did-1.1/#verification-relationships>
-	/// - <https://www.w3.org/TR/cid-1.0/#verification-relationships>
-	///
-	/// # (*) A note about varint encoding
-	///
-	/// [Varint encoding](https://github.com/multiformats/unsigned-varint) is used by
-	/// multiformats to represent variable-size integers. We use varints for the
-	/// `VerificationRelationship` to make it more likely that the syntax for did:pkarrm
-	/// will continue to be valid even if did-core adds more verification relationships
-	/// increasing the overall number to more than 8 (the maximum number of bits in a
-	/// byte). Instead of preemptively using a u16 or u32, we simply use a varint.
-	///
-	/// However as of right now, did:pkarrm *only* supports three verification
-	/// relationships, meaning only the lowest 3 bits could ever be set. Varint encoding
-	/// is a no-op for all bytes `<128` because their most significant bit is not set.
-	/// This means that even though the verification relationship is *specified* as a
-	/// varint, this implementation of did:pkarrm can disregard this and just directly
-	/// encode as a u8 bitflags.
-	#[derive(Debug, Eq, PartialEq, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-	#[repr(C)]
-	pub struct VerificationRelationship: u8 {
-		/// <https://www.w3.org/TR/cid-1.0/#authentication>
-		const Authentication = (1 << 0);
-		/// <https://www.w3.org/TR/cid-1.0/#assertion>
-		const Assertion = (1 << 1);
-		/// <https://www.w3.org/TR/cid-1.0/#key-agreement>
-		const KeyAgreement = (1 << 2);
-	}
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ParseVerificationRelationshipErr {
-	#[error("failed to decode verification relationship using base32z")]
-	VrNotB64(#[from] base64::DecodeError),
-}
+use super::{
+	b64_dec,
+	verification_method::{ParseVerificationMethodErr, VerificationMethod},
+	verification_relationship::{
+		ParseVerificationRelationshipErr, VerificationRelationship,
+	},
+};
 
 /// Everything in a did:pkarrm's Did Document except the `id` field. A
 /// `DidDocumentContents` can be mapped 1:1 to a DNS txt record, for use in PKARR.
@@ -380,15 +220,10 @@ fn split_off_number(s: &str) -> Result<(&str, Option<u8>), std::num::ParseIntErr
 	Ok((prefix, Some(num)))
 }
 
-fn b64_dec(s: &str) -> Result<Vec<u8>, base64::DecodeError> {
-	base64::prelude::BASE64_URL_SAFE_NO_PAD.decode(s)
-}
-
 #[cfg(test)]
 mod test {
-	use eyre::Context;
-
 	use super::*;
+	use eyre::Context;
 
 	fn b64_enc(data: &[u8]) -> String {
 		base64::prelude::BASE64_URL_SAFE_NO_PAD.encode(data)
