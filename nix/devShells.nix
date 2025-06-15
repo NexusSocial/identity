@@ -20,6 +20,7 @@ in
   default = pkgs.mkShell {
     # These programs be available to the dev shell
     buildInputs = (with pkgs; [
+      bacon
       cargo-deny
       cargo-expand
       cargo-watch
