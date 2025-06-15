@@ -83,14 +83,37 @@ impl<T: AsRef<str>> PartialEq<T> for Did {
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
 	use super::*;
+
+	// From https://datatracker.ietf.org/doc/html/rfc8032#section-7.1
+	pub(crate) const DID_KEY_EXAMPLES: &[&str] = &[
+		"did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw", // Test1
+		"did:key:z6MkiaMbhXHNA4eJVCCj8dbzKzTgYDKf6crKgHVHid1F1WCT", // Test2
+		"did:key:z6MkwSD8dBdqcXQzKJZQFPy2hh2izzxskndKCjdmC2dBpfME", // Test3
+		"did:key:z6Mkh7U7jBwoMro3UeHmXes4tKtFbZhMRWejbtunbU4hhvjP", // Test1024
+		"did:key:z6MkvLrkgkeeWeRwktZGShYPiB5YuPkhN2yi3MqMKZMFMgWr", // TestSha
+	];
+
+	// From: https://w3c-ccg.github.io/did-method-web/#example-example-web-method-dids
+	pub(crate) const DID_WEB_EXAMPLES: &[&str] = &[
+		"did:web:w3c-ccg.github.io",
+		"did:web:w3c-ccg.github.io:user:alice",
+		"did:web:example.com%3A3000",
+	];
 
 	#[test]
 	fn test_invalid_prefix_fails() {
-		let negative_examples = ["di:not:valid", "did:nomethod"];
-		for e in negative_examples {
+		let negative_cases = ["di:not:valid", "did:nomethod"];
+		for e in negative_cases {
 			assert!(Did::from_str(e).is_err(), "failed example {e}")
+		}
+	}
+
+	#[test]
+	fn test_positive_cases() {
+		for e in DID_KEY_EXAMPLES {
+			Did::from_str(e).expect(&format!("failed test case {e}"));
 		}
 	}
 }

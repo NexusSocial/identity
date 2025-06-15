@@ -10,10 +10,8 @@ use pkarr::dns::{rdata::TXT, CharacterString};
 
 use super::{
 	b64_dec,
-	verification_method::{ParseVerificationMethodErr, VerificationMethod},
-	verification_relationship::{
-		ParseVerificationRelationshipErr, VerificationRelationship,
-	},
+	vmethod::{ParseVerificationMethodErr, VerificationMethod},
+	vrelationship::{ParseVerificationRelationshipErr, VerificationRelationship},
 };
 
 /// Everything in a did:pkarrm's Did Document except the `id` field. A

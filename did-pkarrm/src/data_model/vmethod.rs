@@ -85,3 +85,44 @@ impl Display for VerificationMethod {
 		write!(f, "{}", self.as_did())
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use std::str::FromStr as _;
+
+	use crate::data_model::did::test::{DID_KEY_EXAMPLES, DID_WEB_EXAMPLES};
+	use crate::data_model::{did::Did, vmethod::VerificationMethod};
+
+	#[test]
+	fn test_correct_variant() {
+		for e in DID_WEB_EXAMPLES {
+			let did = Did::from_str(e).unwrap();
+			let parsed = VerificationMethod::from_str(e).unwrap();
+			let try_from = VerificationMethod::try_from(did.clone()).unwrap();
+			assert_eq!(
+				parsed, try_from,
+				"parsing and try_from were not the same for example {e}"
+			);
+			assert_eq!(parsed, VerificationMethod::DidUrl(did));
+		}
+
+		for e in DID_KEY_EXAMPLES {
+			let did = Did::from_str(e).unwrap();
+			let parsed = VerificationMethod::from_str(e).unwrap();
+			let try_from = VerificationMethod::try_from(did.clone()).unwrap();
+			assert_eq!(
+				parsed, try_from,
+				"parsing and try_from were not the same for example {e}"
+			);
+			assert_eq!(parsed, VerificationMethod::DidKey(did));
+		}
+	}
+
+	#[test]
+	fn test_as_did() {
+		for e in [DID_KEY_EXAMPLES, DID_WEB_EXAMPLES].concat() {
+			let vm = Did::from_str(e).unwrap();
+			assert_eq!(vm.as_uri(), e, "failed example {e}");
+		}
+	}
+}
