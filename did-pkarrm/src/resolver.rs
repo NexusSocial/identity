@@ -1,12 +1,14 @@
 use std::{
 	collections::{BTreeMap, HashMap, HashSet},
+	fmt::{Display, Write},
 	num::ParseIntError,
 	str::FromStr,
 };
 
+use base64::Engine;
 use bitflags::bitflags;
 use fluent_uri::Uri;
-use pkarr::dns::rdata::TXT;
+use pkarr::dns::{rdata::TXT, CharacterString};
 
 /// A verification method most typically is a public key (via `did:key`), or a Did Url
 /// that links to a verification method in a different Did Document.
@@ -22,6 +24,15 @@ pub enum VerificationMethod {
 	/// Dids, users can use more convenient third party services while retaining their
 	/// ability for credible exit.
 	DidUrl(Did),
+}
+
+impl VerificationMethod {
+	pub fn as_did(&self) -> &Did {
+		match self {
+			VerificationMethod::DidKey(did) => did,
+			VerificationMethod::DidUrl(did) => did,
+		}
+	}
 }
 
 impl FromStr for VerificationMethod {
@@ -63,12 +74,13 @@ impl From<Did> for VerificationMethod {
 
 impl<T: AsRef<str>> PartialEq<T> for VerificationMethod {
 	fn eq(&self, other: &T) -> bool {
-		let did = match self {
-			VerificationMethod::DidKey(did) => did,
-			VerificationMethod::DidUrl(did) => did,
-		};
+		self.as_did() == other
+	}
+}
 
-		did == other
+impl Display for VerificationMethod {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.as_did())
 	}
 }
 
@@ -78,6 +90,12 @@ pub struct Did(Uri<String>);
 impl Did {
 	pub fn as_uri(&self) -> &Uri<String> {
 		&self.0
+	}
+}
+
+impl Display for Did {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.as_uri())
 	}
 }
 
@@ -140,7 +158,8 @@ bitflags! {
 	/// This means that even though the verification relationship is *specified* as a
 	/// varint, this implementation of did:pkarrm can disregard this and just directly
 	/// encode as a u8 bitflags.
-	#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+	#[derive(Debug, Eq, PartialEq, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+	#[repr(C)]
 	pub struct VerificationRelationship: u8 {
 		/// <https://www.w3.org/TR/cid-1.0/#authentication>
 		const Authentication = (1 << 0);
@@ -154,7 +173,7 @@ bitflags! {
 #[derive(Debug, thiserror::Error)]
 pub enum ParseVerificationRelationshipErr {
 	#[error("failed to decode verification relationship using base32z")]
-	VrNotB32z,
+	VrNotB64(#[from] base64::DecodeError),
 }
 
 /// Everything in a did:pkarrm's Did Document except the `id` field. A
@@ -162,6 +181,7 @@ pub enum ParseVerificationRelationshipErr {
 ///
 /// The generics are simply to enable borrowed data, they can be `&str` or `String`.
 /// See [fluent_uri] for more info.
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct DidDocumentContents {
 	/// "Also Known As". A list of alternative aliases for the user.
 	/// <https://www.w3.org/TR/cid-1.0/#also-known-as>
@@ -171,6 +191,54 @@ pub struct DidDocumentContents {
 	/// The [VerificationRelationship]s. The index in the vec matches
 	/// `vm`.
 	pub vr: Vec<VerificationRelationship>,
+}
+
+impl DidDocumentContents {
+	pub fn to_txt_record(&self) -> TXT<'static> {
+		// Had to use fn instead of closure because no impl T in closures
+		fn populate_txt_from_iter(
+			sbuf: &mut String,
+			txt: &mut TXT,
+			key_prefix: &str,
+			it: impl Iterator<Item = impl Display>,
+		) {
+			for (key_idx, v) in it.into_iter().enumerate() {
+				sbuf.clear();
+				write!(sbuf, "{key_prefix}{key_idx}={v}").unwrap();
+				// We use the string buffer because CharacterString copies
+				// causing us to unecessarily drop buffers just to reallocate them.
+				let cs = CharacterString::new(sbuf.as_bytes())
+					.expect("TODO: is this always infallbile?")
+					.into_owned();
+				txt.add_char_string(cs);
+			}
+		}
+
+		let mut txt = TXT::new();
+		let mut sbuf = String::new();
+		populate_txt_from_iter(&mut sbuf, &mut txt, "aka", self.aka.iter());
+		populate_txt_from_iter(&mut sbuf, &mut txt, "vm", self.vm.iter());
+
+		// Populate vr attr
+		{
+			let vr_as_bytes: &[u8] = bytemuck::cast_slice(self.vr.as_slice());
+			sbuf.clear();
+			sbuf.push_str("vr=");
+			base64::prelude::BASE64_URL_SAFE_NO_PAD
+				.encode_string(vr_as_bytes, &mut sbuf);
+			let cs = CharacterString::new(sbuf.as_bytes())
+				.expect("TODO: is this always infallbile?")
+				.into_owned();
+			txt.add_char_string(cs);
+		}
+
+		debug_assert!(
+			txt.clone().long_attributes().unwrap().keys().is_sorted(),
+			"all keys should be alphabetically sorted"
+		);
+
+		txt
+	}
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -217,8 +285,8 @@ impl TryFrom<TXT<'_>> for DidDocumentContents {
 		let vm = vm?;
 
 		let vr: String = singleton.remove("vr").unwrap_or_default();
-		let vr: Vec<VerificationRelationship> = b32z_decode(&vr)
-			.map_err(|()| ParseVerificationRelationshipErr::VrNotB32z)?
+		let vr: Vec<VerificationRelationship> = b64_dec(&vr)
+			.map_err(ParseVerificationRelationshipErr::from)?
 			.into_iter()
 			.map(VerificationRelationship::from_bits_truncate)
 			.collect();
@@ -312,8 +380,8 @@ fn split_off_number(s: &str) -> Result<(&str, Option<u8>), std::num::ParseIntErr
 	Ok((prefix, Some(num)))
 }
 
-fn b32z_decode(s: &str) -> Result<Vec<u8>, ()> {
-	base32::decode(base32::Alphabet::Z, s).ok_or(())
+fn b64_dec(s: &str) -> Result<Vec<u8>, base64::DecodeError> {
+	base64::prelude::BASE64_URL_SAFE_NO_PAD.decode(s)
 }
 
 #[cfg(test)]
@@ -322,8 +390,8 @@ mod test {
 
 	use super::*;
 
-	fn b32z(data: &[u8]) -> String {
-		base32::encode(base32::Alphabet::Z, data)
+	fn b64_enc(data: &[u8]) -> String {
+		base64::prelude::BASE64_URL_SAFE_NO_PAD.encode(data)
 	}
 
 	fn make_txt_record<'a, AKA, VM>(aka: AKA, vm: VM, vr: &str) -> TXT<'static>
@@ -343,6 +411,11 @@ mod test {
 		let cs = format!("vr={vr}").try_into().unwrap();
 		txt.add_char_string(cs);
 
+		assert!(
+			txt.clone().long_attributes().unwrap().keys().is_sorted(),
+			"sanity: keys should be alphabetically sorted"
+		);
+
 		txt
 	}
 
@@ -352,23 +425,54 @@ mod test {
 		let aka0 = "at://atproto.com";
 		let vm0 = "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw";
 		let vr0 = VerificationRelationship::Authentication;
-		let txt = make_txt_record([aka0], [vm0], &b32z(&[vr0.bits()]));
+		let original_txt = make_txt_record([aka0], [vm0], &b64_enc(&[vr0.bits()]));
+		let expected_doc = DidDocumentContents {
+			aka: vec![Uri::parse(aka0).unwrap().to_owned()],
+			vm: vec![vm0.parse().unwrap()],
+			vr: vec![vr0],
+		};
 
-		// Sanity checks
-		let attrs = dbg!(txt.attributes());
-		assert_eq!(attrs["aka0"].as_deref(), Some(aka0));
-		assert_eq!(attrs["vm0"].as_deref(), Some(vm0));
-		assert_eq!(b32z_decode(attrs["vr"].as_ref().unwrap()).unwrap(), &[0x1]);
+		// Sanity: expected TXT attributes
+		{
+			let attrs = dbg!(original_txt.attributes());
+			assert_eq!(attrs["aka0"].as_deref(), Some(aka0));
+			assert_eq!(attrs["vm0"].as_deref(), Some(vm0));
+			assert_eq!(b64_dec(attrs["vr"].as_ref().unwrap()).unwrap(), &[0x1]);
+		}
+		// Sanity: expected DidDocumentContents
+		{
+			assert_eq!(expected_doc.aka, vec![aka0]);
+			assert_eq!(expected_doc.vm, vec![vm0]);
+			assert_eq!(expected_doc.vr, vec![vr0]);
+		}
 
-		// Act
-		let doc: DidDocumentContents = txt
+		// Act: txt -> doc
+		let doc: DidDocumentContents = original_txt
+			.clone()
 			.try_into()
 			.wrap_err("error while converting TXT record to DID document contents")?;
 
-		// Assert
+		// Assert: document matches inputs
 		assert_eq!(doc.aka, [aka0]);
 		assert_eq!(doc.vm, [vm0]);
 		assert_eq!(doc.vr, [vr0]);
+		assert_eq!(doc, expected_doc, "(txt -> doc) != expected_doc");
+		assert_eq!(expected_doc, doc, "(txt -> doc) != expected_doc");
+
+		// Act: doc -> txt
+		let roundtripped_txt: TXT<'static> = doc.to_txt_record();
+
+		// Assert: txt round tripped successfully
+		assert_eq!(roundtripped_txt, original_txt);
+		assert_eq!(roundtripped_txt.attributes(), original_txt.attributes());
+		assert_eq!(
+			roundtripped_txt.clone().long_attributes(),
+			original_txt.clone().long_attributes()
+		);
+		assert_eq!(
+			String::try_from(roundtripped_txt).unwrap(),
+			String::try_from(original_txt).unwrap()
+		);
 
 		Ok(())
 	}
