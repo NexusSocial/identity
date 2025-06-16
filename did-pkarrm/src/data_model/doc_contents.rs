@@ -20,7 +20,7 @@ use super::{
 /// The generics are simply to enable borrowed data, they can be `&str` or `String`.
 /// See [fluent_uri] for more info.
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct DidDocumentContents {
+pub(crate) struct DidDocumentContents {
 	/// "Also Known As". A list of alternative aliases for the user.
 	/// <https://www.w3.org/TR/cid-1.0/#also-known-as>
 	pub aka: Vec<Uri<String>>,
@@ -102,6 +102,14 @@ impl TryFrom<TXT<'_>> for DidDocumentContents {
 	type Error = FromTxtRecordErr;
 
 	fn try_from(value: TXT<'_>) -> Result<Self, Self::Error> {
+		Self::try_from(&value)
+	}
+}
+
+impl TryFrom<&TXT<'_>> for DidDocumentContents {
+	type Error = FromTxtRecordErr;
+
+	fn try_from(value: &TXT<'_>) -> Result<Self, Self::Error> {
 		let mut attrs = value.attributes();
 		if attrs.len() >= usize::from(u8::MAX) {
 			return Err(FromTxtRecordErr::TooManyAttrs);
