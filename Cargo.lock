@@ -914,6 +914,7 @@ dependencies = [
  "ed25519-dalek",
  "eyre",
  "fluent-uri",
+ "hex-literal",
  "pkarr",
  "thiserror 1.0.69",
 ]

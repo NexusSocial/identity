@@ -1,4 +1,4 @@
-//! Types associated with the DidDocument data model exposed by this crate.
+//! Types associated with the [DidPkarrDocument].
 
 use std::str::FromStr as _;
 
@@ -13,10 +13,10 @@ use pkarr::{
 use vmethod::VerificationMethod;
 use vrelationship::VerificationRelationship;
 
-pub mod did;
-mod doc_contents;
-pub mod vmethod;
-pub mod vrelationship;
+pub(crate) mod did;
+pub(crate) mod doc_contents;
+pub(crate) mod vmethod;
+pub(crate) mod vrelationship;
 
 const TXT_DOMAIN: &str = "_did_pkarr.";
 
@@ -24,14 +24,14 @@ fn b64_dec(s: &str) -> Result<Vec<u8>, base64::DecodeError> {
 	base64::prelude::BASE64_URL_SAFE_NO_PAD.decode(s)
 }
 
-/// A `did:pkarr` maps to a `PkarrDidDocument`
+/// The type returned when resolving a [DidPkarr](crate::DidPkarr) to its document.
 #[derive(Debug, Eq, PartialEq)]
-pub struct PkarrDidDocument {
+pub struct DidPkarrDocument {
 	id: pkarr::PublicKey,
 	contents: DidDocumentContents,
 }
 
-impl PkarrDidDocument {
+impl DidPkarrDocument {
 	/// Get the DID associated with this DID Document.
 	///
 	/// # Performance
@@ -82,7 +82,7 @@ pub enum TryFromSignedPacketErr {
 	FromTxtRecordErr(#[from] FromTxtRecordErr),
 }
 
-impl TryFrom<SignedPacket> for PkarrDidDocument {
+impl TryFrom<SignedPacket> for DidPkarrDocument {
 	type Error = TryFromSignedPacketErr;
 
 	fn try_from(value: SignedPacket) -> Result<Self, Self::Error> {
@@ -110,7 +110,7 @@ mod test {
 
 	use super::{
 		did::test::DID_KEY_EXAMPLES, doc_contents::DidDocumentContents,
-		vrelationship::VerificationRelationship, PkarrDidDocument,
+		vrelationship::VerificationRelationship, DidPkarrDocument,
 	};
 
 	#[test]
@@ -118,7 +118,7 @@ mod test {
 		let key = pkarr::Keypair::random();
 		let signing_key = SigningKey::from_bytes(&key.secret_key());
 		let ts = Timestamp::from(std::time::SystemTime::UNIX_EPOCH);
-		let expected_doc = PkarrDidDocument {
+		let expected_doc = DidPkarrDocument {
 			id: key.public_key(),
 			contents: DidDocumentContents {
 				aka: vec!["at://thebutlah.com".parse().unwrap()],
@@ -135,7 +135,7 @@ mod test {
 		let signed = expected_doc
 			.to_pkarr_packet(&signing_key, ts)
 			.expect("failed to serialize to pkarr");
-		let deserialized_doc = PkarrDidDocument::try_from(signed)
+		let deserialized_doc = DidPkarrDocument::try_from(signed)
 			.expect("failed to deserialize from pkarr");
 		assert_eq!(deserialized_doc, expected_doc);
 	}

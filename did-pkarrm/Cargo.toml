@@ -21,5 +21,8 @@ fluent-uri = "0.3.2"
 pkarr = { version = "3.7.2", default-features = false, features = ["relays", "keys"] }
 thiserror.workspace = true
 
+[dev-dependencies]
+hex-literal.workspace = true
+
 [package.metadata.docs.rs]
 all-features = true

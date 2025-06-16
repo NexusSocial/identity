@@ -4,3 +4,12 @@
 //! [pkarr]: https://github.com/Pubky/pkarr
 
 pub mod data_model;
+mod did_pkarr;
+
+pub use crate::data_model::DidPkarrDocument;
+pub use crate::did_pkarr::DidPkarr;
+
+/// Error types for the crate
+pub mod errors {
+	pub use crate::did_pkarr::{DidPkarrParseErr, InvalidPubkeyErr};
+}
