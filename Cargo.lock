@@ -911,6 +911,7 @@ dependencies = [
  "base64 0.21.7",
  "bitflags",
  "bytemuck",
+ "ed25519-dalek",
  "eyre",
  "fluent-uri",
  "pkarr",
