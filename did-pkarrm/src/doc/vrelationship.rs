@@ -5,8 +5,8 @@ bitflags! {
 	///
 	/// # What is a verification relationship?
 	///
-	/// A verification relationship dictates how a particular [`VerificationMethod`].
-	/// Can be used.
+	/// A verification relationship dictates how a particular
+	/// [`VerificationMethod`](crate::data_model::VerificationMethod) can be used.
 	///
 	/// See also:
 	/// - <https://www.w3.org/TR/did-1.1/#verification-relationships>
