@@ -1,5 +1,5 @@
 [package]
-name = "did-pkarrm"
+name = "did-pkarr"
 version.workspace = true
 license.workspace = true
 repository.workspace = true
