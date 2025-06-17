@@ -23,16 +23,9 @@ The basic format is:
 * Use [pkarr][pkarr] to look up the associated (signed) DNS TXT record.
 * Convert that TXT record into a DID Document.
 
-In code this is:
-
-```rust
-todo!()
-```
-
 ## Project Status
 
-This project is experimental and prone to breaking changes. It might not even be
-functional. Be warned!
+This project is experimental and prone to breaking changes. Be warned!
 
-[did]: https://www.w3.org/TR/did-1.0/NexusSocial
+[did]: https://www.w3.org/TR/did-1.1/
 [pkarr]: https://github.com/pubky/pkarr
