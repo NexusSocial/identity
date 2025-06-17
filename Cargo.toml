@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-	"did-pkarrm",
+	"did-pkarr",
 	"did-simple",
 	"did-yeet",
 	"header-parsing",

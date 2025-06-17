@@ -14,7 +14,7 @@ use super::{
 	vrelationship::{ParseVerificationRelationshipErr, VerificationRelationship},
 };
 
-/// Everything in a did:pkarrm's Did Document except the `id` field. A
+/// Everything in a did:pkarr's Did Document except the `id` field. A
 /// `DidDocumentContents` can be mapped 1:1 to a DNS txt record, for use in PKARR.
 ///
 /// The generics are simply to enable borrowed data, they can be `&str` or `String`.

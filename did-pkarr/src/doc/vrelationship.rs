@@ -16,16 +16,16 @@ bitflags! {
 	///
 	/// [Varint encoding](https://github.com/multiformats/unsigned-varint) is used by
 	/// multiformats to represent variable-size integers. We use varints for the
-	/// `VerificationRelationship` to make it more likely that the syntax for did:pkarrm
+	/// `VerificationRelationship` to make it more likely that the syntax for did:pkarr
 	/// will continue to be valid even if did-core adds more verification relationships
 	/// increasing the overall number to more than 8 (the maximum number of bits in a
 	/// byte). Instead of preemptively using a u16 or u32, we simply use a varint.
 	///
-	/// However as of right now, did:pkarrm *only* supports three verification
+	/// However as of right now, did:pkarr *only* supports three verification
 	/// relationships, meaning only the lowest 3 bits could ever be set. Varint encoding
 	/// is a no-op for all bytes `<128` because their most significant bit is not set.
 	/// This means that even though the verification relationship is *specified* as a
-	/// varint, this implementation of did:pkarrm can disregard this and just directly
+	/// varint, this implementation of did:pkarr can disregard this and just directly
 	/// encode as a u8 bitflags.
 	#[derive(Debug, Eq, PartialEq, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 	#[repr(C)]
