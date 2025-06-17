@@ -31,6 +31,18 @@ pub struct DidPkarrDocument {
 	contents: DidDocumentContents,
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("failed to convert to pkarr packet")]
+pub struct ToPkarrErr(#[from] ToPkarrErrInner);
+
+#[derive(Debug, thiserror::Error)]
+enum ToPkarrErrInner {
+	#[error("signing key did not match verifying key")]
+	KeyMismatch,
+	#[error("failed to convert to pkarr SignedPacket")]
+	ToPkarr(#[from] pkarr::errors::SignedPacketBuildError),
+}
+
 impl DidPkarrDocument {
 	/// Get the DID associated with this DID Document.
 	///
@@ -59,8 +71,11 @@ impl DidPkarrDocument {
 		&self,
 		signing_key: &ed25519_dalek::SigningKey,
 		ts: pkarr::Timestamp,
-	) -> Result<pkarr::SignedPacket, pkarr::errors::SignedPacketBuildError> {
+	) -> Result<pkarr::SignedPacket, ToPkarrErr> {
 		let kp = Keypair::from_secret_key(signing_key.as_bytes());
+		if signing_key.verifying_key() != *self.id.verifying_key() {
+			return Err(ToPkarrErrInner::KeyMismatch).map_err(ToPkarrErr::from);
+		}
 		pkarr::SignedPacket::builder()
 			.timestamp(ts)
 			.txt(
@@ -69,6 +84,8 @@ impl DidPkarrDocument {
 				0,
 			)
 			.sign(&kp)
+			.map_err(ToPkarrErrInner::from)
+			.map_err(ToPkarrErr::from)
 	}
 }
 
