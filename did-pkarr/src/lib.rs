@@ -6,6 +6,13 @@
 
 pub mod dids;
 pub mod doc;
+#[cfg(any(feature = "dht", feature = "http"))]
+pub mod io;
 
 pub use crate::dids::DidPkarr;
 pub use crate::doc::DidPkarrDocument;
+
+pub use pkarr;
+
+#[cfg(any(feature = "dht", feature = "http"))]
+pub use crate::io::PkarrClientExt;

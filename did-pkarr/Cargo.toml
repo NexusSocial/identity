@@ -8,7 +8,9 @@ rust-version.workspace = true
 publish = false
 
 [features]
+default = ["dht", "http"]
 dht = ["pkarr/dht"]
+http = ["pkarr/relays"]
 
 [dependencies]
 base32 = "0.5.1"
@@ -18,7 +20,7 @@ bytemuck = { workspace = true, features = ["derive" ] }
 ed25519-dalek.workspace = true
 eyre.workspace = true
 fluent-uri = "0.3.2"
-pkarr = { version = "3.7.2", default-features = false, features = ["relays", "keys"] }
+pkarr = { version = "3.7.2", default-features = false, features = ["signed_packet"] }
 thiserror.workspace = true
 
 [dev-dependencies]
