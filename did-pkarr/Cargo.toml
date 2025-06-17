@@ -1,7 +1,11 @@
 [package]
 name = "did-pkarr"
 version = "0.0.0"
+description = "PKARR based Decentralized Identifiers"
 authors = ["Ryan Butler <thebutlah@users.noreply.github.com>"]
+keywords = ["pkarr", "did", "decentralized", "identity", "p2p"]
+categories = ["cryptography", "network-programming", "web-programming", "game-development"]
+
 license.workspace = true
 repository.workspace = true
 edition.workspace = true
