@@ -1,7 +1,6 @@
-//! `did:pkarr` - [Decentralized Identifiers] using
-//! [Public Key Addressable Resource Record][pkarr]s.
+//! `did:pkarr` - [PKARR][pkarr] based [Decentralized Identifiers][did]
 //!
-//! [did]: https://www.w3.org/TR/did-1.0/
+//! [did]: https://www.w3.org/TR/did-1.1/
 //! [pkarr]: https://github.com/Pubky/pkarr
 
 pub mod dids;
