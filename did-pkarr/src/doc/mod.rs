@@ -31,6 +31,18 @@ pub struct DidPkarrDocument {
 	contents: DidDocumentContents,
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("failed to convert to pkarr packet")]
+pub struct ToPkarrErr(#[from] ToPkarrErrInner);
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+enum ToPkarrErrInner {
+	#[error("signing key did not match verifying key")]
+	KeyMismatch,
+	#[error("failed to convert to pkarr SignedPacket")]
+	ToPkarr(#[from] pkarr::errors::SignedPacketBuildError),
+}
+
 impl DidPkarrDocument {
 	/// Get the DID associated with this DID Document.
 	///
@@ -59,8 +71,11 @@ impl DidPkarrDocument {
 		&self,
 		signing_key: &ed25519_dalek::SigningKey,
 		ts: pkarr::Timestamp,
-	) -> Result<pkarr::SignedPacket, pkarr::errors::SignedPacketBuildError> {
+	) -> Result<pkarr::SignedPacket, ToPkarrErr> {
 		let kp = Keypair::from_secret_key(signing_key.as_bytes());
+		if signing_key.verifying_key() != *self.id.verifying_key() {
+			return Err(ToPkarrErr::from(ToPkarrErrInner::KeyMismatch));
+		}
 		pkarr::SignedPacket::builder()
 			.timestamp(ts)
 			.txt(
@@ -69,6 +84,8 @@ impl DidPkarrDocument {
 				0,
 			)
 			.sign(&kp)
+			.map_err(ToPkarrErrInner::from)
+			.map_err(ToPkarrErr::from)
 	}
 }
 
@@ -106,23 +123,50 @@ impl TryFrom<SignedPacket> for DidPkarrDocument {
 
 #[cfg(test)]
 mod test {
-	use ed25519_dalek::SigningKey;
+	use super::*;
+	use crate::dids::test::{DID_KEY_EXAMPLES, ED25519_EXAMPLES};
+
 	use pkarr::Timestamp;
+	use std::time::SystemTime;
 
-	use super::{
-		doc_contents::DidDocumentContents, vrelationship::VerificationRelationship,
-		DidPkarrDocument,
-	};
-
-	use crate::dids::test::DID_KEY_EXAMPLES;
+	fn dummy_doc(signing_key: &ed25519_dalek::SigningKey) -> DidPkarrDocument {
+		DidPkarrDocument {
+			id: signing_key.verifying_key().as_bytes().try_into().unwrap(),
+			contents: DidDocumentContents {
+				aka: vec!["at://thebutlah.com".parse().unwrap()],
+				vm: DID_KEY_EXAMPLES
+					.iter()
+					.map(|k| k.parse().unwrap())
+					.collect(),
+				vr: DID_KEY_EXAMPLES
+					.iter()
+					.map(|_| VerificationRelationship::Authentication)
+					.collect(),
+			},
+		}
+	}
 
 	#[test]
 	fn test_from_signed_packet() {
-		let key = pkarr::Keypair::random();
-		let signing_key = SigningKey::from_bytes(&key.secret_key());
+		let signing_key = &ED25519_EXAMPLES[0];
+		let expected_doc = dummy_doc(signing_key);
+		let ts = Timestamp::from(SystemTime::UNIX_EPOCH);
+		let signed = expected_doc
+			.to_pkarr_packet(signing_key, ts)
+			.expect("failed to serialize to pkarr");
+		let deserialized_doc = DidPkarrDocument::try_from(signed)
+			.expect("failed to deserialize from pkarr");
+		assert_eq!(deserialized_doc, expected_doc);
+	}
+
+	#[test]
+	fn test_protection_against_key_mismatch() {
+		let s1 = ED25519_EXAMPLES[0].clone();
+		let p1: pkarr::PublicKey = s1.verifying_key().as_bytes().try_into().unwrap();
+		let s2 = ED25519_EXAMPLES[1].clone();
 		let ts = Timestamp::from(std::time::SystemTime::UNIX_EPOCH);
-		let expected_doc = DidPkarrDocument {
-			id: key.public_key(),
+		let doc_from_s1 = DidPkarrDocument {
+			id: p1.clone(),
 			contents: DidDocumentContents {
 				aka: vec!["at://thebutlah.com".parse().unwrap()],
 				vm: DID_KEY_EXAMPLES
@@ -135,11 +179,17 @@ mod test {
 					.collect(),
 			},
 		};
-		let signed = expected_doc
-			.to_pkarr_packet(&signing_key, ts)
-			.expect("failed to serialize to pkarr");
-		let deserialized_doc = DidPkarrDocument::try_from(signed)
-			.expect("failed to deserialize from pkarr");
-		assert_eq!(deserialized_doc, expected_doc);
+
+		assert_eq!(
+			doc_from_s1.to_pkarr_packet(&s1, ts).unwrap().public_key(),
+			p1
+		);
+		assert_eq!(
+			doc_from_s1
+				.to_pkarr_packet(&s2, ts)
+				.expect_err("mismatched keys should error")
+				.0,
+			ToPkarrErrInner::KeyMismatch
+		);
 	}
 }
