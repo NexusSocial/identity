@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr};
 
 use fluent_uri::Uri;
 
-use super::did::{Did, DidFromUriErr};
+use crate::dids::{Did, DidFromUriErr};
 
 /// A verification method most typically is a public key (via `did:key`), or a Did Url
 /// that links to a verification method in a different Did Document.
@@ -90,8 +90,8 @@ impl Display for VerificationMethod {
 mod tests {
 	use std::str::FromStr as _;
 
-	use crate::data_model::did::test::{DID_KEY_EXAMPLES, DID_WEB_EXAMPLES};
-	use crate::data_model::{did::Did, vmethod::VerificationMethod};
+	use crate::dids::test::{DID_KEY_EXAMPLES, DID_WEB_EXAMPLES};
+	use crate::doc::{vmethod::VerificationMethod, Did};
 
 	#[test]
 	fn test_correct_variant() {

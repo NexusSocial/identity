@@ -1,22 +1,22 @@
-//! Types associated with the [DidPkarrDocument].
+//! Types related to the [`DidPkarrDocument`].
 
 use std::str::FromStr as _;
 
 use base64::Engine as _;
-use did::Did;
 use doc_contents::{DidDocumentContents, FromTxtRecordErr};
 use fluent_uri::Uri;
 use pkarr::{
 	dns::{rdata::RData, Name},
 	Keypair, SignedPacket,
 };
-use vmethod::VerificationMethod;
-use vrelationship::VerificationRelationship;
 
-pub(crate) mod did;
+use crate::dids::Did;
+
 pub(crate) mod doc_contents;
 pub(crate) mod vmethod;
 pub(crate) mod vrelationship;
+
+pub use self::{vmethod::VerificationMethod, vrelationship::VerificationRelationship};
 
 const TXT_DOMAIN: &str = "_did_pkarr.";
 
@@ -72,6 +72,7 @@ impl DidPkarrDocument {
 	}
 }
 
+/// Error converting a [SignedPacket] to a [DidPkarrDocument].
 #[derive(Debug, thiserror::Error)]
 pub enum TryFromSignedPacketErr {
 	#[error("missing a _did_pkarr TXT record")]
@@ -109,9 +110,11 @@ mod test {
 	use pkarr::Timestamp;
 
 	use super::{
-		did::test::DID_KEY_EXAMPLES, doc_contents::DidDocumentContents,
-		vrelationship::VerificationRelationship, DidPkarrDocument,
+		doc_contents::DidDocumentContents, vrelationship::VerificationRelationship,
+		DidPkarrDocument,
 	};
+
+	use crate::dids::test::DID_KEY_EXAMPLES;
 
 	#[test]
 	fn test_from_signed_packet() {
