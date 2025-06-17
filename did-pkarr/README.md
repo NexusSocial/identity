@@ -1,7 +1,7 @@
 # did:pkarr - PKARR based Decentralized Identifiers
 
 `did:pkarr` are [DID][did]s that are based on
-[Public Key Addressable Resource Records](pkarr).
+[Public Key Addressable Resource Records][pkarr].
 
 ## Why use did:pkarr over other alternatives?
 
