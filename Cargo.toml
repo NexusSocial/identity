@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+	"did-key",
 	"did-pkarr",
 	"did-simple",
 	"did-yeet",
@@ -24,14 +25,16 @@ axum-extra = "0.9.3"
 axum-macros = "0.4.1"
 axum-server = "0.7.1"
 base64 = "0.21.7"
-bs58 = "0.5.1"
+bytemuck = "1.23.1"
 clap = { version = "4.4.11", features = ["derive"] }
 color-eyre = "0.6"
 curve25519-dalek = "4.1.2"
 did-simple.path = "did-simple"
 document-features = "0.2.11"
+dynosaur = "0.2.0"
 ed25519-dalek = "2.1.1"
 eyre = "0.6"
+fluent-uri = "0.3.2"
 futures = "0.3.30"
 header-parsing.path = "header-parsing"
 hex-literal = "1.0.0"
@@ -45,7 +48,7 @@ serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.114"
 serde_with = "3.12.0"
 sha2 = "0.10.9"
-thiserror = "1.0.64"
+thiserror = { version = "2.0.12", default-features = false }
 tokio = { version = "1.35.1", default-features = false }
 toml = "0.8.19"
 tower = "0.4.13"
@@ -53,15 +56,28 @@ tower-http = "0.5.2"
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-test = "0.2.5"
-unsigned-varint = "0.8.0"
 url = "2.5.2"
 uuid = "1.7.0"
 wiremock = "0.6.2"
-bytemuck = "1.23.1"
+
+did-pkarr.path = "did-pkarr"
+did-key.path = "did-key"
 
 [workspace.dependencies.derive_more]
 version = "2.0.1"
+
 default-features = false
+
+[workspace.dependencies.bs58]
+default-features = false
+git = "https://github.com/conr2d/bs58-rs.git"
+# branch = "core-error"
+rev = "eea2e9d4f25bb5d79e2a21138531ca6d0ca18678"
+
+[workspace.dependencies.unsigned-varint]
+default-features = false
+git = "https://github.com/TheButlah/unsigned-varint.git"
+branch = "thebutlah/core-error"
 
 [profile.dev]
 # Enable a small amount of optimization in debug mode

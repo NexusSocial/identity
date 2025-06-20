@@ -67,8 +67,8 @@ enum DidPkarrParseErrInner {
 	#[error("not base32-z encoded")]
 	NotBase32zEncoded,
 	#[error(
-		"pubkey bytes were of length {0} but expected length {}",
-		ed25519_dalek::PUBLIC_KEY_LENGTH
+		"pubkey bytes were of length {0} but expected length {expected_len}",
+		expected_len=ed25519_dalek::PUBLIC_KEY_LENGTH
 	)]
 	WrongLength(usize),
 	#[error(transparent)]

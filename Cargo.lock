@@ -498,8 +498,7 @@ checksum = "3eeab4423108c5d7c744f4d234de88d18d636100093ae04caf4825134b9c3a32"
 [[package]]
 name = "bs58"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf88ba1141d185c399bee5288d850d63b8369520c1eafc32a0430b5b6c287bf4"
+source = "git+https://github.com/conr2d/bs58-rs.git?rev=eea2e9d4f25bb5d79e2a21138531ca6d0ca18678#eea2e9d4f25bb5d79e2a21138531ca6d0ca18678"
 dependencies = [
  "tinyvec",
 ]
@@ -595,7 +594,7 @@ dependencies = [
  "multihash",
  "serde",
  "serde_bytes",
- "unsigned-varint",
+ "unsigned-varint 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -904,6 +903,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab03c107fafeb3ee9f5925686dbb7a73bc76e3932abb0d2b365cb64b169cf04c"
 
 [[package]]
+name = "did-key"
+version = "0.0.0"
+dependencies = [
+ "bs58",
+ "color-eyre",
+ "ed25519-dalek",
+ "hex-literal",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+ "unsigned-varint 0.8.0 (git+https://github.com/TheButlah/unsigned-varint.git?branch=thebutlah%2Fcore-error)",
+]
+
+[[package]]
 name = "did-pkarr"
 version = "0.0.0"
 dependencies = [
@@ -916,7 +929,7 @@ dependencies = [
  "fluent-uri",
  "hex-literal",
  "pkarr",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -931,26 +944,20 @@ dependencies = [
  "hex-literal",
  "itertools",
  "rand_core",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
 name = "did-yeet"
 version = "0.0.0"
 dependencies = [
- "base64 0.21.7",
  "bitflags",
- "bs58",
  "color-eyre",
- "derive_more",
- "ed25519-dalek",
- "hex-literal",
+ "did-key",
  "serde",
  "serde_ipld_dagcbor",
  "serde_json",
  "sha2",
- "thiserror 1.0.69",
- "unsigned-varint",
 ]
 
 [[package]]
@@ -1718,7 +1725,7 @@ dependencies = [
  "serde_json",
  "sqlformat",
  "sqlx",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tokio",
  "toml",
  "tower 0.4.13",
@@ -2078,7 +2085,7 @@ checksum = "6b430e7953c29dd6a09afc29ff0bb69c6e306329ee6794700aee27b76a1aea8d"
 dependencies = [
  "core2",
  "serde",
- "unsigned-varint",
+ "unsigned-varint 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3753,6 +3760,11 @@ name = "unsigned-varint"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb066959b24b5196ae73cb057f45598450d2c5f71460e98c49b738086eff9c06"
+
+[[package]]
+name = "unsigned-varint"
+version = "0.8.0"
+source = "git+https://github.com/TheButlah/unsigned-varint.git?branch=thebutlah%2Fcore-error#d93d931c75e0786835cf97c260ccb8eb68edcd49"
 
 [[package]]
 name = "untrusted"

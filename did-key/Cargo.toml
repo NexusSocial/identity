@@ -1,0 +1,29 @@
+[package]
+name = "did-key"
+version = "0.0.0"
+description = "did:key implementation, sans-io, sans-crypto"
+authors = ["Ryan Butler <thebutlah@users.noreply.github.com>"]
+keywords = ["did", "key", "decentralized", "identity", "p2p"]
+categories = ["cryptography", "network-programming", "web-programming", "game-development"]
+
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+serde = ["dep:serde"]
+
+[dependencies]
+bs58 = { workspace = true, default-features = false, features = ["alloc"] }
+thiserror = { workspace = true, default-features = false }
+serde = { workspace = true, optional = true, features = ["derive"] }
+unsigned-varint = { workspace = true, default-features = false }
+
+[dev-dependencies]
+serde = { workspace = true, features = ["derive"] }
+hex-literal.workspace = true
+ed25519-dalek.workspace = true
+color-eyre.workspace = true
+serde_json.workspace = true
