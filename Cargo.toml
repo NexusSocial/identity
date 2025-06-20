@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+	"did-cli",
 	"did-common",
 	"did-key",
 	"did-pkarr",
@@ -62,6 +63,7 @@ url = "2.5.2"
 uuid = "1.7.0"
 wiremock = "0.6.2"
 
+did-cli.path = "did-cli"
 did-common.path = "did-common"
 did-key.path = "did-key"
 did-pkarr.path = "did-pkarr"

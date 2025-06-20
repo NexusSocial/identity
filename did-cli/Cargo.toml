@@ -1,0 +1,35 @@
+[package]
+name = "did-cli"
+version = "0.0.0"
+description = "Demo CLI for working with DIDs"
+authors = ["Ryan Butler <thebutlah@users.noreply.github.com>"]
+
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+# Feature flags to enable us to experiment with shrinking binary size
+[features]
+default = ["did-pkarr"]
+did-pkarr = ["dep:did-pkarr"]
+# did-web = []
+
+[dependencies]
+clap.workspace = true
+color-eyre.workspace = true
+derive_more = { workspace = true, features = ["display", "deref"] }
+did-common = { workspace = true, features = ["uri"] }
+did-key.workspace = true
+did-pkarr = { workspace = true, optional = true }
+dynosaur.workspace = true
+ed25519-dalek.workspace = true
+eyre.workspace = true
+fluent-uri.workspace = true
+thiserror.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tracing.workspace = true
+
+[dev-dependencies]
+hex-literal.workspace = true
