@@ -8,21 +8,13 @@ rust-version.workspace = true
 description = "did:yeet Decentralized Identitfier"
 publish = false
 
-[features]
-
 [dependencies]
-base64.workspace = true
 bitflags = { version = "2.9.0", features = ["serde"] }
-bs58.workspace = true
 sha2.workspace = true
-thiserror.workspace = true
 serde_ipld_dagcbor = "0.6.3"
 serde = { workspace = true, features = ["derive"] }
-unsigned-varint.workspace = true
-derive_more = { workspace = true, features = ["display", "as_ref", "from", "into"] }
+did-key.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
 color-eyre.workspace = true
-hex-literal.workspace = true
-ed25519-dalek.workspace = true

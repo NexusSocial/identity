@@ -24,7 +24,7 @@ bitflags = { version = "2.9.1", default-features = false, features = ["bytemuck"
 bytemuck = { workspace = true, features = ["derive" ] }
 ed25519-dalek.workspace = true
 eyre.workspace = true
-fluent-uri = "0.3.2"
+fluent-uri.workspace = true
 pkarr = { version = "3.7.2", default-features = false, features = ["signed_packet"] }
 thiserror.workspace = true
 

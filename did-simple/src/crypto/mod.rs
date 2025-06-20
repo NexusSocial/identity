@@ -110,8 +110,8 @@ pub enum ContextError {
 	)]
 	SliceTooShort,
 	#[error(
-		"requires a slice of at most length {} but got a slice of length {0}",
-		Context::MAX_LEN
+		"requires a slice of at most length {0} but got a slice of length {max}",
+		max=Context::MAX_LEN
 	)]
 	SliceTooLong(usize),
 }

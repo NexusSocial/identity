@@ -39,7 +39,7 @@ allow = ["OFL-1.1", "LicenseRef-UFL-1.0"]
 name = "ring"
 expression = "LicenseRef-ring"
 license-files = [
-    { path = "LICENSE", hash = 0xbd0eed23 },
+	{ path = "LICENSE", hash = 0xbd0eed23 },
 ]
 
 [bans]
@@ -56,12 +56,6 @@ unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # please don't make this list any longer qwq
 allow-git = [
-	"https://github.com/DCNick3/unsafe-libopus",
-	"https://github.com/RobWalt/bevy-trait-query",
-	"https://github.com/Schmarni-Dev/Schminput",
-	"https://github.com/Schmarni-Dev/bevy_egui",
-	"https://github.com/Schmarni-Dev/bevy_web_asset",
-	"https://github.com/Schmarni-Dev/opus-rs",
-	"https://github.com/awtterpip/bevy_oxr",
-	"https://github.com/emilk/ehttp",
+	"https://github.com/conr2d/bs58-rs",
+	"https://github.com/TheButlah/unsigned-varint",
 ]

@@ -22,7 +22,7 @@ random = ["dep:rand_core", "ed25519-dalek?/rand_core"]
 allow-unsafe = []
 
 [dependencies]
-bs58.workspace = true
+bs58 = { workspace = true, features = ["std"] }
 bytes = "1.6.0"
 thiserror.workspace = true
 ed25519-dalek = { workspace = true, optional = true, features = ["digest"] }

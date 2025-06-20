@@ -1,6 +1,8 @@
-use std::{fmt::Display, str::FromStr};
+#![cfg_attr(not(test), no_std)]
+extern crate alloc;
 
-use serde::{Deserialize, Serialize};
+use alloc::{borrow::ToOwned, string::String, vec::Vec};
+use core::{fmt::Display, str::FromStr};
 
 /// A parsed did:key. Does not perform validate the public key.
 ///
@@ -9,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// # Example
 ///
 /// ```
-/// # use did_yeet::DidKey;
+/// # use did_key::DidKey;
 /// /// From did:key spec section 4.1
 /// let did_key: DidKey = "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp".parse().unwrap();
 /// ```
@@ -75,7 +77,7 @@ impl FromStr for DidKey {
 }
 
 impl Display for DidKey {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		let mut out = String::new();
 		let mut scratch = Vec::new();
 		self.to_str(&mut scratch, &mut out);
@@ -84,44 +86,61 @@ impl Display for DidKey {
 	}
 }
 
-impl<'de> Deserialize<'de> for DidKey {
-	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-	where
-		D: serde::Deserializer<'de>,
-	{
-		let s = String::deserialize(deserializer)?;
-		s.parse().map_err(serde::de::Error::custom)
+#[cfg(any(feature = "serde", test))]
+mod serde_impls {
+	use super::*;
+
+	use alloc::format;
+
+	use serde::{Deserialize, Serialize};
+
+	impl<'de> Deserialize<'de> for DidKey {
+		fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+		where
+			D: serde::Deserializer<'de>,
+		{
+			let s = String::deserialize(deserializer)?;
+			s.parse().map_err(serde::de::Error::custom)
+		}
+	}
+
+	impl Serialize for DidKey {
+		fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+		where
+			S: serde::Serializer,
+		{
+			serializer.serialize_str(&format!("{self}"))
+		}
 	}
 }
 
-impl Serialize for DidKey {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-	where
-		S: serde::Serializer,
-	{
-		serializer.serialize_str(&format!("{self}"))
+/// Helpful list of multicodec values for various public key types.
+/// See the [multicodec table][multicodec] for more values
+///
+/// [multicodec]: https://github.com/multiformats/multicodec/blob/master/table.csv
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Hash, Ord, PartialOrd)]
+#[repr(u32)]
+#[non_exhaustive]
+pub enum KnownMultikeys {
+	Ed25519Pub = 0xED,
+}
+
+impl From<KnownMultikeys> for u32 {
+	fn from(value: KnownMultikeys) -> Self {
+		value as u32
 	}
 }
 
-#[derive(
-	Debug,
-	Eq,
-	PartialEq,
-	Copy,
-	Clone,
-	Hash,
-	Ord,
-	PartialOrd,
-	derive_more::Deref,
-	derive_more::DerefMut,
-	derive_more::From,
-	derive_more::Into,
-)]
-#[repr(transparent)]
-pub struct KnownMultikeys(pub u32);
+// TODO: use a macro to avoid repeating the numerical literal
+impl TryFrom<u32> for KnownMultikeys {
+	type Error = ();
 
-impl KnownMultikeys {
-	pub const ED25519_PUB: Self = Self(0xED);
+	fn try_from(value: u32) -> Result<Self, Self::Error> {
+		Ok(match value {
+			0xED => Self::Ed25519Pub,
+			_ => return Err(()),
+		})
+	}
 }
 
 #[cfg(test)]
@@ -130,6 +149,7 @@ mod test {
 
 	use color_eyre::eyre::WrapErr as _;
 	use hex_literal::hex;
+	use serde::{Deserialize, Serialize};
 	use std::sync::LazyLock;
 
 	// From https://datatracker.ietf.org/doc/html/rfc8032#section-7.1

@@ -137,7 +137,7 @@ pub enum FromUrlError {
 	UnknownKeyAlgo(u16),
 	#[error(transparent)]
 	Varint(#[from] crate::varint::DecodeError),
-	#[error("{0:?} requires pubkeys of length {} but got {1} bytes", .0.verifying_key_len())]
+	#[error("{0:?} requires pubkeys of length {expected_len} but got {1} bytes", expected_len=.0.verifying_key_len())]
 	MismatchedPubkeyLen(KeyAlgo, usize),
 }
 
