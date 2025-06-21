@@ -2,6 +2,12 @@
 
 Dead simple [DID][spec]s (Decentralized Identifiers).
 
+## Crate status
+
+Due for a major rework. Don't use it until we do that.
+
+## What is it?
+
 This crate provides the ability to:
 * Parse did urls.
 * (optional feature) Perform cryptographic operations on the public keys
@@ -17,7 +23,7 @@ Supported DID methods:
 * did:key
 * (coming soon) did:web
 
-# Security
+## Security
 
 This crate enforces `#![forbid(unsafe_code)]` unless the `allow-unsafe` feature
 is enabled. Since features in rust are additive across a dependency graph, don't
@@ -35,9 +41,10 @@ dependencies on only the following crates:
 We also test effectively every possible bit pattern when encoding and decoding
 varints, a necessary part of did:key resolution.
 
-# Breaking Changes
+## Breaking Changes
 
 This crate is v0.0.X, and may introduce breaking changes at any time, with any
 frequency.
 
 [spec]: https://www.w3.org/TR/did-core/
+
