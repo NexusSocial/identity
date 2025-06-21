@@ -3,10 +3,8 @@
 This serves as a monorepo for projects related to accounts and identity.
 
 In particular, it hosts:
+* [did-key](did-key) - Decentralized Identifiers that are "just a public key".
 * [did-pkarr](did-pkarr) - PKARR based Decentralized Identifiers.
-* [did-simple](did-simple) - A simple pure rust and sans-io crate with minimal
-  dependencies to work with did:key and did:web urls, signing, and verifying.
-  did:web
 * [identity-server](/identity-server) - A did:web HTTP server that implements a "sign
   in with google/meta" approach.
 
