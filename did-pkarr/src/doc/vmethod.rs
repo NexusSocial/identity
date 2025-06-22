@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr};
 
 use fluent_uri::Uri;
 
-use crate::dids::{Did, DidFromUriErr};
+use did_common::did::Did;
 
 /// A verification method most typically is a public key (via `did:key`), or a Did Url
 /// that links to a verification method in a different Did Document.

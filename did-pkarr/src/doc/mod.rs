@@ -10,7 +10,7 @@ use pkarr::{
 	Keypair, SignedPacket,
 };
 
-use crate::dids::Did;
+use did_common::did::Did;
 
 pub(crate) mod doc_contents;
 pub(crate) mod vmethod;

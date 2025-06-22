@@ -933,6 +933,7 @@ dependencies = [
  "base64 0.21.7",
  "bitflags",
  "bytemuck",
+ "did-common",
  "ed25519-dalek",
  "eyre",
  "fluent-uri",
