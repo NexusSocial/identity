@@ -1,6 +1,8 @@
 //! Module to abstract over whether we use fluent_uri or just a string.
 //! Limits the scope of cfg gated code to this module as much as possble
 
+use alloc::string::String;
+
 #[cfg(feature = "uri")]
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 #[repr(transparent)]
