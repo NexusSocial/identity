@@ -1,5 +1,5 @@
-use core::ops::RangeFrom;
-use std::str::FromStr;
+use alloc::{borrow::ToOwned as _, string::String};
+use core::{ops::RangeFrom, str::FromStr};
 
 use crate::uri::{NotAUriErr, Uri};
 
@@ -45,7 +45,7 @@ impl Did {
 }
 
 impl PartialOrd for Did {
-	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+	fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
 		Some(self.cmp(other))
 	}
 }
@@ -57,7 +57,7 @@ impl AsRef<str> for Did {
 }
 
 impl Ord for Did {
-	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+	fn cmp(&self, other: &Self) -> core::cmp::Ordering {
 		self.uri.cmp(&other.uri)
 	}
 }
@@ -158,7 +158,7 @@ impl FromStr for Did {
 }
 
 impl core::fmt::Display for Did {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(f, "{}", self.as_str())
 	}
 }
