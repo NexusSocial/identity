@@ -903,6 +903,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab03c107fafeb3ee9f5925686dbb7a73bc76e3932abb0d2b365cb64b169cf04c"
 
 [[package]]
+name = "did-common"
+version = "0.0.0"
+dependencies = [
+ "fluent-uri",
+ "serde",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "did-key"
 version = "0.0.0"
 dependencies = [
