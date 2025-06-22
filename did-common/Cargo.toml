@@ -1,0 +1,22 @@
+[package]
+name = "did-common"
+version = "0.0.0"
+description = "common types for DIDs"
+authors = ["Ryan Butler <thebutlah@users.noreply.github.com>"]
+keywords = ["did", "types", "decentralized", "identity", "p2p"]
+categories = ["cryptography", "network-programming", "web-programming", "game-development"]
+
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+default = ["uri"]
+uri = ["dep:fluent-uri"] # enables stricter parsing
+
+[dependencies]
+fluent-uri = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+thiserror = { workspace = true, default-features = false }

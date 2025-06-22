@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+	"did-common",
 	"did-key",
 	"did-pkarr",
 	"did-simple",
@@ -42,6 +43,7 @@ http = "1.1.0"
 http-body-util = "0.1.2"
 jose-jwk = { version = "0.1.2", default-features = false }
 rand = "0.8.5"
+ref-cast = "1.0.24"
 reqwest = { version = "0.12.7", default-features = false }
 rustls-acme = { version = "0.11.1", default-features = false }
 serde = { version = "1.0.193", features = ["derive"] }
@@ -60,8 +62,9 @@ url = "2.5.2"
 uuid = "1.7.0"
 wiremock = "0.6.2"
 
-did-pkarr.path = "did-pkarr"
+did-common.path = "did-common"
 did-key.path = "did-key"
+did-pkarr.path = "did-pkarr"
 
 [workspace.dependencies.derive_more]
 version = "2.0.1"
