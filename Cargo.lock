@@ -903,6 +903,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab03c107fafeb3ee9f5925686dbb7a73bc76e3932abb0d2b365cb64b169cf04c"
 
 [[package]]
+name = "did-common"
+version = "0.0.0"
+dependencies = [
+ "fluent-uri",
+ "serde",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "did-key"
 version = "0.0.0"
 dependencies = [
@@ -1121,8 +1130,7 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 [[package]]
 name = "fluent-uri"
 version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1918b65d96df47d3591bed19c5cca17e3fa5d0707318e4b5ef2eae01764df7e5"
+source = "git+https://github.com/TheButlah/fluent-uri-rs?branch=thebutlah%2Fuse-core-error#110dfa18388edc50d10a8cc5471e1065769cedab"
 dependencies = [
  "borrow-or-share",
  "ref-cast",
