@@ -54,6 +54,13 @@ impl From<Uri> for fluent_uri::Uri<String> {
 	}
 }
 
+#[cfg(feature = "uri")]
+impl From<fluent_uri::Uri<String>> for Uri {
+	fn from(value: fluent_uri::Uri<String>) -> Self {
+		Uri(value)
+	}
+}
+
 impl From<Uri> for String {
 	fn from(value: Uri) -> Self {
 		#[cfg_attr(not(feature = "uri"), expect(clippy::useless_conversion))]

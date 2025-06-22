@@ -137,6 +137,20 @@ impl TryFrom<String> for Did {
 	}
 }
 
+#[cfg(feature = "uri")]
+impl TryFrom<fluent_uri::Uri<String>> for Did {
+	type Error = DidParseErr;
+
+	fn try_from(uri: fluent_uri::Uri<String>) -> Result<Self, Self::Error> {
+		let method_specific_id = parse_method_specific_id(uri.as_str())?;
+
+		Ok(Self {
+			uri: Uri::from(uri),
+			method_specific_id,
+		})
+	}
+}
+
 impl FromStr for Did {
 	type Err = DidParseErr;
 
