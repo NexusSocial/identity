@@ -1,7 +1,7 @@
-use alloc::{borrow::ToOwned as _, string::String};
-use core::{ops::RangeFrom, str::FromStr};
+use alloc::string::String;
+use core::str::FromStr;
 
-use crate::uri::{NotAUriErr, Uri};
+use crate::did_url::{DidUrl, DidUrlParseErr};
 
 // TODO: Do we want to allow for borrowing strings?
 
@@ -9,38 +9,57 @@ use crate::uri::{NotAUriErr, Uri};
 /// resolved to a DID Document.
 ///
 /// [did-syntax]: https://www.w3.org/TR/did-1.1/#did-syntax
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, Clone)]
 pub struct Did {
-	uri: Uri,
-	// u16 instead of usize because identifiers cant be that long anyway
-	method_specific_id: RangeFrom<u16>,
+	// All DidUrls are Dids but not all Dids are DidUrls
+	inner: DidUrl,
 }
 
 impl Did {
 	pub fn as_str(&self) -> &str {
-		self.uri.as_str()
+		let range = ..usize::from(u16::from(self.inner.method_specific_id.end));
+		debug_assert_eq!(
+			range,
+			..self.inner.as_str().len(),
+			"until we support views on a DidUrl, `inner` shouldnt contain a fragment"
+		);
+		&self.inner.as_str()[range]
 	}
 
 	#[cfg(feature = "uri")]
 	pub fn as_uri(&self) -> &fluent_uri::Uri<String> {
-		self.uri.as_fluent()
+		self.inner.as_uri()
+	}
+
+	pub fn as_did_url(&self) -> &DidUrl {
+		&self.inner
 	}
 
 	/// The method for this did.
 	///
+	/// # Example
 	/// ```
 	/// # use did_common::did::Did;
 	/// # use std::str::FromStr;
 	/// assert_eq!(Did::from_str("did:example:foobar").unwrap().method(), "example");
 	/// ```
 	pub fn method(&self) -> &str {
-		const START_IDX: usize = "did:".len() as _;
-		let method_range = START_IDX..usize::from(self.method_specific_id.start - 1);
-		&self.uri.as_str()[method_range]
+		self.inner.method()
 	}
 
+	/// The method-specific for this did.
+	///
+	/// # Example
+	/// ```
+	/// # use did_common::did::Did;
+	/// # use std::str::FromStr;
+	/// assert_eq!(
+	///     Did::from_str("did:example:foobar").unwrap().method_specific_id(),
+	///     "foobar",
+	/// );
+	/// ```
 	pub fn method_specific_id(&self) -> &str {
-		&self.uri.as_str()[usize::from(self.method_specific_id.start)..]
+		self.inner.method_specific_id()
 	}
 }
 
@@ -52,88 +71,41 @@ impl PartialOrd for Did {
 
 impl AsRef<str> for Did {
 	fn as_ref(&self) -> &str {
-		self.uri.as_str()
+		self.as_str()
 	}
 }
 
 impl Ord for Did {
 	fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-		self.uri.cmp(&other.uri)
+		self.inner.cmp(&other.inner)
 	}
 }
 
-impl PartialEq<str> for Did {
-	fn eq(&self, other: &str) -> bool {
-		self.uri.as_str() == other
+impl<T: AsRef<str>> PartialEq<T> for Did {
+	fn eq(&self, other: &T) -> bool {
+		self.as_str() == other.as_ref()
 	}
 }
-
-impl PartialEq<String> for Did {
-	fn eq(&self, other: &String) -> bool {
-		self.uri.as_str() == other
-	}
-}
-
 /// NOTE: We do not consider the particular implementation of Debug/Display to be
 /// covered by semver guarantees
 #[derive(Debug, thiserror::Error)]
 pub enum DidParseErr {
-	#[error("string was too long")]
-	TooLong,
-	#[error("missing `did:` prefix")]
-	MissingPrefix,
-	#[error("missing DID method")]
-	MissingMethod,
-	#[error("method specific ID was invalid")]
-	EmptyMethodSpecificId,
 	#[error(transparent)]
-	NotAUri(#[from] NotAUriErr),
-	#[error("did contains query params but only DidUrls can have this")]
-	ContainsQuery,
-	#[error("did contains a fragment but only DidUrls can have this")]
+	DidUrl(#[from] DidUrlParseErr),
+	#[error("contains a fragment but only DidUrls can have this")]
 	ContainsFragment,
-}
-
-fn parse_method_specific_id(value: &str) -> Result<RangeFrom<u16>, DidParseErr> {
-	if value.len() > u16::MAX.into() {
-		return Err(DidParseErr::TooLong);
-	}
-	let Some(suffix) = value.strip_prefix("did:") else {
-		return Err(DidParseErr::MissingPrefix);
-	};
-	let Some((method, method_specific_id)) = suffix.split_once(":") else {
-		return Err(DidParseErr::MissingMethod);
-	};
-	if method.is_empty() {
-		return Err(DidParseErr::MissingMethod);
-	}
-	if method_specific_id.is_empty() {
-		return Err(DidParseErr::EmptyMethodSpecificId);
-	}
-
-	let meth_specific_id_start = u16::try_from(value.len() - method_specific_id.len())
-		.expect("infallible: already checked size");
-
-	Ok(meth_specific_id_start..)
 }
 
 impl TryFrom<String> for Did {
 	type Error = DidParseErr;
 
 	fn try_from(value: String) -> Result<Self, Self::Error> {
-		let method_specific_id = parse_method_specific_id(&value)?;
-		let uri = Uri::try_from(value)?;
-		if uri.has_query() {
-			return Err(DidParseErr::ContainsQuery);
-		}
-		if uri.has_fragment() {
+		let inner = DidUrl::try_from(value)?;
+		if !inner.fragment().is_empty() {
 			return Err(DidParseErr::ContainsFragment);
 		}
 
-		Ok(Self {
-			uri,
-			method_specific_id,
-		})
+		Ok(Self { inner })
 	}
 }
 
@@ -141,13 +113,13 @@ impl TryFrom<String> for Did {
 impl TryFrom<fluent_uri::Uri<String>> for Did {
 	type Error = DidParseErr;
 
-	fn try_from(uri: fluent_uri::Uri<String>) -> Result<Self, Self::Error> {
-		let method_specific_id = parse_method_specific_id(uri.as_str())?;
+	fn try_from(value: fluent_uri::Uri<String>) -> Result<Self, Self::Error> {
+		let inner = DidUrl::try_from(value)?;
+		if !inner.fragment().is_empty() {
+			return Err(DidParseErr::ContainsFragment);
+		}
 
-		Ok(Self {
-			uri: Uri::from(uri),
-			method_specific_id,
-		})
+		Ok(Self { inner })
 	}
 }
 
@@ -155,19 +127,12 @@ impl FromStr for Did {
 	type Err = DidParseErr;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let method_specific_id = parse_method_specific_id(s)?;
-		let uri = Uri::try_from(s.to_owned())?;
-		if uri.has_query() {
-			return Err(DidParseErr::ContainsQuery);
-		}
-		if uri.has_fragment() {
+		let inner = DidUrl::from_str(s)?;
+		if !inner.fragment().is_empty() {
 			return Err(DidParseErr::ContainsFragment);
 		}
 
-		Ok(Self {
-			uri,
-			method_specific_id,
-		})
+		Ok(Self { inner })
 	}
 }
 
@@ -207,7 +172,7 @@ mod test {
 		const DID_EXAMPLE_EXAMPLES: &[&str] = &[
 			"did:example:foobar:1337",
 			"did:example:1337",
-			"did:example:123456/path",
+			"did:example:123456%2Fencodedpath",
 		];
 
 		for e in DID_EXAMPLE_EXAMPLES {
@@ -259,20 +224,31 @@ mod test {
 	}
 
 	#[test]
+	fn test_reject_paths() {
+		assert!(matches!(
+			Did::from_str("did:example:123456/path"),
+			Err(DidParseErr::DidUrl(DidUrlParseErr::ContainsPath))
+		));
+		assert!(matches!(
+			Did::from_str("did:example:123/api?x=y"),
+			Err(DidParseErr::DidUrl(DidUrlParseErr::ContainsPath))
+		));
+	}
+
+	#[test]
 	fn test_reject_queries() {
 		// https://www.w3.org/TR/did-1.1/#example-3
 		assert!(matches!(
 			Did::from_str("did:example:123456?versionId=1"),
-			Err(DidParseErr::ContainsQuery)
+			Err(DidParseErr::DidUrl(DidUrlParseErr::ContainsQuery))
 		));
 
-		// For api stability we should continue to return the query error instead of fragment
 		// https://www.w3.org/TR/did-1.1/#example-a-resource-external-to-a-did-document
 		assert!(matches!(
 			Did::from_str(
 				"did:example:123?service=agent&relativeRef=/credentials%23degree"
 			),
-			Err(DidParseErr::ContainsQuery)
+			Err(DidParseErr::DidUrl(DidUrlParseErr::ContainsQuery))
 		));
 	}
 
@@ -282,6 +258,12 @@ mod test {
 		assert!(matches!(
 			Did::from_str("did:example:123#public-key-0"),
 			Err(DidParseErr::ContainsFragment)
+		));
+		assert!(matches!(
+			Did::from_str("did:example:123#"),
+			Err(DidParseErr::DidUrl(
+				DidUrlParseErr::CannotEndWithFragmentSpecifier
+			))
 		));
 	}
 
