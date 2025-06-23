@@ -99,6 +99,12 @@ impl<T: AsRef<str>> PartialEq<T> for Did {
 	}
 }
 
+impl From<Did> for fluent_uri::Uri<String> {
+	fn from(value: Did) -> Self {
+		value.uri
+	}
+}
+
 #[cfg(test)]
 pub(crate) mod test {
 	use super::*;
