@@ -1,7 +1,7 @@
 use std::{future::Future, time::SystemTime};
 
-pub use pkarr::Client;
 use pkarr::Timestamp;
+pub use pkarr::{Client, ClientBlocking};
 
 use crate::{
 	doc::{ToPkarrErr, TryFromSignedPacketErr},

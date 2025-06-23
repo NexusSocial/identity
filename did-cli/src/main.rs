@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use color_eyre::Result;
+use did_common::did::Did;
 use tracing::info;
 use tracing_subscriber::{
 	layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter,
@@ -43,10 +44,16 @@ impl CreateCmd {
 }
 
 #[derive(Debug, Parser)]
-struct ReadCmd;
+struct ReadCmd {
+	did: Did,
+}
 
 impl ReadCmd {
 	fn run(self) -> Result<()> {
-		todo!()
+		let client = did_cli::client::Client::builder().build();
+		let doc = client.read(&self.did)?;
+		println!("{doc:#?}");
+
+		Ok(())
 	}
 }

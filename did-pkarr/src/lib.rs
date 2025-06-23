@@ -14,4 +14,4 @@ pub use crate::doc::DidPkarrDocument;
 pub use pkarr;
 
 #[cfg(any(feature = "dht", feature = "http"))]
-pub use crate::io::{Client, PkarrClientBlockingExt, PkarrClientExt};
+pub use crate::io::{Client, ClientBlocking, PkarrClientBlockingExt, PkarrClientExt};

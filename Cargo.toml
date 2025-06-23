@@ -27,6 +27,7 @@ axum-extra = "0.9.3"
 axum-macros = "0.4.1"
 axum-server = "0.7.1"
 base64 = "0.21.7"
+bon = "3.6.4"
 bytemuck = "1.23.1"
 clap = { version = "4.4.11", features = ["derive"] }
 color-eyre = "0.6"

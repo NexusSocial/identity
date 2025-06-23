@@ -17,6 +17,7 @@ did-pkarr = ["dep:did-pkarr"]
 # did-web = []
 
 [dependencies]
+bon.workspace = true
 clap.workspace = true
 color-eyre.workspace = true
 derive_more = { workspace = true, features = ["display", "deref"] }
@@ -28,6 +29,7 @@ ed25519-dalek.workspace = true
 eyre.workspace = true
 fluent-uri.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing.workspace = true
 

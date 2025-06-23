@@ -2,7 +2,10 @@
 extern crate alloc;
 
 use alloc::{borrow::ToOwned, string::String, vec::Vec};
-use core::{fmt::Display, str::FromStr};
+use core::{
+	fmt::{Debug, Display},
+	str::FromStr,
+};
 
 /// A parsed did:key. Does not perform validate the public key.
 ///
@@ -17,7 +20,7 @@ use core::{fmt::Display, str::FromStr};
 /// ```
 ///
 /// [spec]: https://w3c-ccg.github.io/did-key-spec
-#[derive(Debug, Eq, PartialEq, Clone, Hash)]
+#[derive(Eq, PartialEq, Clone, Hash)]
 pub struct DidKey {
 	pub multicodec: u32,
 	pub pubkey: Vec<u8>,
@@ -73,6 +76,34 @@ impl FromStr for DidKey {
 			multicodec,
 			pubkey: pubkey.to_owned(),
 		})
+	}
+}
+
+impl Debug for DidKey {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		let s = self.pubkey.as_slice();
+		let e = s.len();
+		let mut closure = |pubkey| {
+			f.debug_struct(core::any::type_name::<Self>())
+				.field("multicodec", &self.multicodec)
+				.field("pubkey", &pubkey)
+				.finish()
+		};
+		if e > 8 {
+			closure(format_args!(
+				"{:x}{:x}{:x}{:x}...{:x}{:x}{:x}{:x}",
+				s[0],
+				s[1],
+				s[2],
+				s[3],
+				s[e - 4],
+				s[e - 3],
+				s[e - 2],
+				s[e - 1],
+			))
+		} else {
+			closure(format_args!("{:x?}", s))
+		}
 	}
 }
 
