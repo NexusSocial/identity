@@ -63,7 +63,7 @@ impl DidMethodBlocking for DidKey {
 impl DidMethod for DidKey {
 	type Error = Infallible;
 
-	fn read(&self) -> impl Future<Output = Result<(), Self::Error>> + Send {
-		core::future::ready(todo!())
+	async fn read(&self) -> Result<(), Self::Error> {
+		<Self as DidMethodBlocking>::read(self)
 	}
 }

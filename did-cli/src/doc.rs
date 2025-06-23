@@ -2,7 +2,7 @@ use std::{collections::BTreeSet, fmt::Display};
 
 use crate::Uri;
 
-use did_common::did::Did;
+use did_common::{did::Did, did_url::DidUrl};
 
 /// For simplicity we are more opinionated about how to normalize a DidDocument.
 ///
@@ -39,13 +39,4 @@ impl Display for DidUrlFragment {
 pub enum VerificationMethod {
 	DidKey(Did),
 	Reference(DidUrl),
-}
-
-#[derive(Debug)]
-pub struct DidUrl(String);
-
-impl DidUrl {
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
 }

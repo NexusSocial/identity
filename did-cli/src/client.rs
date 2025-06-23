@@ -6,9 +6,6 @@ use std::sync::Arc;
 
 use crate::{doc::DidDocument, DidMethodBlocking, DynDidMethod, StdError};
 
-type DynDidMethodBlocking =
-	Box<dyn DidMethodBlocking<Error = Box<dyn StdError + Send + Sync + 'static>>>;
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 struct MethodId(&'static str);
 
@@ -25,7 +22,6 @@ pub struct Client(Arc<ClientInner>);
 #[derive(Debug)]
 pub struct ClientInner {
 	resolvers: HashMap<MethodId, DynDidMethod>,
-	resolvers_blocking: HashMap<MethodId, DynDidMethodBlocking>,
 }
 
 impl ClientInner {
