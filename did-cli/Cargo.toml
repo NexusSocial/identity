@@ -25,9 +25,10 @@ did-common = { workspace = true, features = ["uri"] }
 did-key.workspace = true
 did-pkarr = { workspace = true, optional = true }
 dynosaur.workspace = true
-ed25519-dalek.workspace = true
+ed25519-dalek = { workspace = true, features = ["rand_core"] }
 eyre.workspace = true
 fluent-uri.workspace = true
+rand.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }

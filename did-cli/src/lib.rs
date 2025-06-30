@@ -15,3 +15,9 @@ pub enum DynDidMethod {
 	Key(DidKey),
 	// Pkarr(did_pkarr::DidPkarr),
 }
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum DidMethodKind {
+	Key,
+	Pkarr,
+}

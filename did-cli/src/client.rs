@@ -2,12 +2,14 @@ use bon::bon;
 use did_common::did::Did;
 use did_key::DidKey;
 use did_pkarr::DidPkarr;
+use ed25519_dalek::SigningKey;
 use eyre::{eyre, Result, WrapErr as _};
 use std::fmt::Debug;
 use std::str::FromStr as _;
 use std::sync::Arc;
 
 use crate::resolvers::{DidPkarrResolverBlocking, DidResolverBlocking};
+use crate::DidMethodKind;
 use crate::{doc::DidDocument, resolvers::DidKeyResolver};
 
 #[derive(Debug, Clone, derive_more::Deref)]
@@ -52,5 +54,24 @@ impl ClientInner {
 		};
 
 		Ok(doc)
+	}
+
+	pub fn create(&self, method: DidMethodKind, priv_key: &SigningKey) -> Result<Did> {
+		let pub_key = priv_key.verifying_key();
+		let did = match method {
+			DidMethodKind::Key => {
+				let did = DidKey {
+					multicodec: did_key::KnownMultikeys::Ed25519Pub.into(),
+					pubkey: pub_key.as_bytes().to_vec(),
+				};
+
+				let did: Did = format!("{did}").parse().unwrap();
+
+				did
+			}
+			DidMethodKind::Pkarr => todo!(),
+		};
+
+		Ok(did)
 	}
 }
