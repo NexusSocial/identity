@@ -978,6 +978,7 @@ dependencies = [
  "eyre",
  "fluent-uri",
  "hex-literal",
+ "rand",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
