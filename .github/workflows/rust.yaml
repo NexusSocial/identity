@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v5
-    - uses: EmbarkStudios/cargo-deny-action@v2.0.11
+    - uses: EmbarkStudios/cargo-deny-action@v2.0.13
 
   build:
     name: Build Binaries
@@ -75,9 +75,9 @@ jobs:
     runs-on: ${{ matrix.runner-vars.runs-on }}
     steps:
       - uses: actions/checkout@v5
-      - uses: mlugg/setup-zig@v2.0.1
+      - uses: mlugg/setup-zig@v2.0.5
         with:
-          version: 0.13.0
+          version: 0.14.0
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2.8.0
 
@@ -86,7 +86,7 @@ jobs:
         # https://github.com/rust-cross/cargo-zigbuild/issues/343#issuecomment-2957759839
         run: sudo apt-get install -y gcc-mingw-w64-x86-64
       - name: Install cargo-zigbuild
-        run: cargo install --locked cargo-zigbuild@0.19.3
+        run: cargo install --locked cargo-zigbuild@0.20.1
 
       - name: |
           Configure cross compilation targets for runner
