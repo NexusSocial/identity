@@ -5,19 +5,19 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     # Linux
-    nixos-24_11.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixos-25_05.url = "github:NixOS/nixpkgs/nixos-25.05";
     nixos-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixos-generators = {
-      url = "github:nix-community/nixos-generators/7c60ba4bc8d6aa2ba3e5b0f6ceb9fc07bc261565";
-      inputs.nixpkgs.follows = "nixos-24_11";
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixos-25_05";
     };
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
-      inputs.nixpkgs.follows = "nixos-24_11";
+      url = "github:nix-community/home-manager/release-25.05";
+      inputs.nixpkgs.follows = "nixos-25_05";
     };
 
     #Darwin
-    nixpkgs-24_11-darwin.url = "github:NixOS/nixpkgs/nixpkgs-24.11-darwin";
+    nixpkgs-25_05-darwin.url = "github:NixOS/nixpkgs/nixpkgs-25.05-darwin";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     fenix = {

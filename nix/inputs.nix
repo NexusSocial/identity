@@ -6,7 +6,7 @@ in
 {
   inherit (inputs-raw) fenix nixos-generators home-manager deploy-rs;
   self = inputs-raw.self;
-  nixpkgs = if isDarwin then inputs-raw.nixpkgs-24_11-darwin else inputs-raw.nixos-24_11;
+  nixpkgs = if isDarwin then inputs-raw.nixpkgs-25_05-darwin else inputs-raw.nixos-25_05;
   nixpkgs-unstable = if isDarwin then inputs-raw.nixpkgs-unstable else inputs-raw.nixos-unstable;
   # fenix = if isDarwin then inputs-raw.fenix-darwin else inputs-raw.fenix-linux;
 }
