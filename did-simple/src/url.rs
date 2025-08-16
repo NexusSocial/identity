@@ -71,7 +71,7 @@ impl DidUrl {
 	}
 
 	/// Method-specific identity info.
-	pub fn method_specific_id(&self) -> MethodSpecificId {
+	pub fn method_specific_id(&self) -> MethodSpecificId<'_> {
 		MethodSpecificId(self)
 	}
 }
