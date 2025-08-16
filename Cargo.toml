@@ -16,7 +16,7 @@ members = [
 version = "0.0.0"
 license = "MIT-0 OR Apache-2.0"
 repository = "https://github.com/NexusSocial/identity"
-edition = "2021"
+edition = "2024"
 rust-version = "1.89.0"
 
 [workspace.dependencies]
