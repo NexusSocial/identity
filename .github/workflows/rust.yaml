@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v5
-    - uses: EmbarkStudios/cargo-deny-action@v2.0.11
+    - uses: EmbarkStudios/cargo-deny-action@v2
 
   build:
     name: Build Binaries
