@@ -13,14 +13,14 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v27
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
       - name: Build mdbook
         run: nix develop -c mdbook build docs
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4.0.0
         with:
           path: ./docs/book
