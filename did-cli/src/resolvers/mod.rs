@@ -1,4 +1,4 @@
-use crate::{doc::DidDocument, StdError};
+use crate::{StdError, doc::DidDocument};
 use std::{fmt::Debug, future::Future};
 
 mod key;

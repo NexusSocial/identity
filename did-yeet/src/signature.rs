@@ -20,7 +20,7 @@ impl From<Vec<u8>> for Signature {
 
 #[cfg(test)]
 mod tests {
-	use color_eyre::{eyre::Context, Section};
+	use color_eyre::{Section, eyre::Context};
 
 	use super::*;
 

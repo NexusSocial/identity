@@ -91,7 +91,7 @@ mod tests {
 	use std::str::FromStr as _;
 
 	use crate::dids::test::{DID_KEY_EXAMPLES, DID_WEB_EXAMPLES};
-	use crate::doc::{vmethod::VerificationMethod, Did};
+	use crate::doc::{Did, vmethod::VerificationMethod};
 
 	#[test]
 	fn test_correct_variant() {

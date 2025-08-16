@@ -6,7 +6,7 @@ use std::{
 
 use base64::Engine;
 use fluent_uri::Uri;
-use pkarr::dns::{rdata::TXT, CharacterString};
+use pkarr::dns::{CharacterString, rdata::TXT};
 
 use super::{
 	b64_dec,

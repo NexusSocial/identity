@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use arc_swap::ArcSwap;
 use axum::async_trait;
-use color_eyre::{eyre::WrapErr as _, Result, Section};
+use color_eyre::{Result, Section, eyre::WrapErr as _};
 use jsonwebtoken::jwk::JwkSet;
 use reqwest::Url;
 use tracing::{debug, info};
@@ -162,7 +162,7 @@ mod test {
 	use super::*;
 	use axum::http::header::{AGE, CACHE_CONTROL};
 	use tracing_test::traced_test;
-	use wiremock::{matchers, Mock, MockServer, ResponseTemplate};
+	use wiremock::{Mock, MockServer, ResponseTemplate, matchers};
 
 	fn client() -> &'static reqwest::Client {
 		static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();

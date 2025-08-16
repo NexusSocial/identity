@@ -132,9 +132,7 @@ pub(crate) const fn decode_varint(encoded: &[u8]) -> Result<(u16, &[u8]), Decode
 pub enum DecodeError {
 	#[error("expected more bytes than what were provided")]
 	MissingBytes,
-	#[error(
-		"the decoded number is too large to fit into the type without overflowing"
-	)]
+	#[error("the decoded number is too large to fit into the type without overflowing")]
 	WouldOverflow,
 }
 
@@ -274,7 +272,9 @@ mod test {
 							"expected successful decode of {bytes:?} to match expected decode value"
 						);
 					} else {
-						panic!("expected all successful decodes to have a matching entry in the valid varint set. Offending bytes: {bytes:?}");
+						panic!(
+							"expected all successful decodes to have a matching entry in the valid varint set. Offending bytes: {bytes:?}"
+						);
 					}
 				}
 				Err(_err) => assert!(!valid_varints.contains_key(&bytes)),

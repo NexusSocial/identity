@@ -12,22 +12,22 @@
 use std::sync::Arc;
 
 use axum::{
+	Json, Router,
 	extract::{Path, State},
 	http::StatusCode,
 	response::{IntoResponse, Redirect},
 	routing::{get, post},
-	Json, Router,
 };
-use color_eyre::eyre::{bail, Context as _};
+use color_eyre::eyre::{Context as _, bail};
 use jose_jwk::{Jwk, JwkSet};
 use tracing::error;
 use url::Host;
 use uuid::Uuid;
 
 use crate::{
+	MigratedDbPool,
 	handle::{Handle, InvalidHandle},
 	uuid::UuidProvider,
-	MigratedDbPool,
 };
 
 #[derive(Debug, Clone)]
@@ -78,7 +78,9 @@ enum CreateErr {
 	HandleTaken,
 	#[error("that handle is reserved")]
 	HandleReserved,
-	#[error("handle contained a dot, which is only valid for handles on third-party domains")]
+	#[error(
+		"handle contained a dot, which is only valid for handles on third-party domains"
+	)]
 	HandleContainedDot,
 }
 

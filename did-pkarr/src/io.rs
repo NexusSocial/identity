@@ -4,8 +4,8 @@ use pkarr::Timestamp;
 pub use pkarr::{Client, ClientBlocking};
 
 use crate::{
-	doc::{ToPkarrErr, TryFromSignedPacketErr},
 	DidPkarr, DidPkarrDocument,
+	doc::{ToPkarrErr, TryFromSignedPacketErr},
 };
 
 #[derive(Debug, thiserror::Error)]

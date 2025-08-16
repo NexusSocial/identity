@@ -5,7 +5,7 @@ use curve25519_dalek::edwards::CompressedEdwardsY;
 use super::Context;
 use crate::key_algos::StaticSigningAlgo as _;
 
-pub use ed25519_dalek::{ed25519::Signature, Digest, Sha512, SignatureError};
+pub use ed25519_dalek::{Digest, Sha512, SignatureError, ed25519::Signature};
 
 /// Re-exported for lower level control
 pub use ed25519_dalek;
@@ -222,7 +222,9 @@ pub enum TryFromBytesError {
 		"the provided bytes was not the y coordinate of a valid point on the curve"
 	)]
 	NotOnCurve,
-	#[error("public key has a low order and is too weak, which would allow the key to generate signatures that work for almost any message. To prevent this, we reject weak keys.")]
+	#[error(
+		"public key has a low order and is too weak, which would allow the key to generate signatures that work for almost any message. To prevent this, we reject weak keys."
+	)]
 	WeakKey,
 }
 
