@@ -28,6 +28,7 @@ pub(crate) trait StaticSigningAlgo {
 	/// The length of the private signing key.
 	const SIGNING_KEY_LEN: usize;
 	const MULTICODEC_VALUE: u16;
+	#[expect(dead_code)]
 	const MULTICODEC_VALUE_ENCODED: &'static [u8] =
 		encode_varint(Self::MULTICODEC_VALUE).as_slice();
 }
