@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use axum::{extract::State, response::IntoResponse, routing::post, Form, Router};
+use axum::{Form, Router, extract::State, response::IntoResponse, routing::post};
 use axum_extra::extract::cookie::CookieJar;
-use color_eyre::eyre::{eyre, OptionExt, WrapErr as _};
+use color_eyre::eyre::{OptionExt, WrapErr as _, eyre};
 use jsonwebtoken::DecodingKey;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};

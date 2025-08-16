@@ -4,8 +4,8 @@ use std::{fmt::Display, str::FromStr};
 
 use crate::dids::Did;
 
-use ed25519_dalek::SignatureError;
 pub use ed25519_dalek::PUBLIC_KEY_LENGTH;
+use ed25519_dalek::SignatureError;
 
 /// Represents a `did:pkarr`.
 #[derive(Debug, Eq)]

@@ -18,7 +18,7 @@ use std::{
 };
 
 use axum::routing::get;
-use color_eyre::{eyre::WrapErr as _, Result};
+use color_eyre::{Result, eyre::WrapErr as _};
 use config::{Config, TlsConfig};
 use futures::{FutureExt, StreamExt as _};
 use sqlx::sqlite::SqlitePool;

@@ -6,8 +6,8 @@ use base64::Engine as _;
 use doc_contents::{DidDocumentContents, FromTxtRecordErr};
 use fluent_uri::Uri;
 use pkarr::{
-	dns::{rdata::RData, Name},
 	Keypair, SignedPacket,
+	dns::{Name, rdata::RData},
 };
 
 use crate::dids::Did;

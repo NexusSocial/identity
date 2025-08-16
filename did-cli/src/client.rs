@@ -3,13 +3,13 @@ use did_common::did::Did;
 use did_key::DidKey;
 use did_pkarr::DidPkarr;
 use ed25519_dalek::SigningKey;
-use eyre::{eyre, Result, WrapErr as _};
+use eyre::{Result, WrapErr as _, eyre};
 use std::fmt::Debug;
 use std::str::FromStr as _;
 use std::sync::Arc;
 
-use crate::resolvers::{DidPkarrResolverBlocking, DidResolverBlocking};
 use crate::DidMethodKind;
+use crate::resolvers::{DidPkarrResolverBlocking, DidResolverBlocking};
 use crate::{doc::DidDocument, resolvers::DidKeyResolver};
 
 #[derive(Debug, Clone, derive_more::Deref)]

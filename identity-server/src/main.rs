@@ -5,21 +5,22 @@ use std::{
 
 use clap::Parser as _;
 use color_eyre::{
-	eyre::{bail, Context, OptionExt, Result},
 	Section as _,
+	eyre::{Context, OptionExt, Result, bail},
 };
 use futures::FutureExt;
 use tokio::task::JoinHandle;
 use tokio::{io::AsyncWriteExt as _, sync::oneshot};
 use tracing::{debug, info};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use identity_server::{
+	MigratedDbPool,
 	config::{
-		Config, DatabaseConfig, TlsConfig, ValidationError, DEFAULT_CONFIG_CONTENTS,
+		Config, DEFAULT_CONFIG_CONTENTS, DatabaseConfig, TlsConfig, ValidationError,
 	},
 	jwks_provider::JwksProvider,
-	spawn_http_server, spawn_https_server, MigratedDbPool,
+	spawn_http_server, spawn_https_server,
 };
 
 const GOOGLE_CLIENT_ID_DOCS_URL: &str = "https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#get_your_google_api_client_id";

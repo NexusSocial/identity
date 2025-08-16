@@ -3,10 +3,10 @@ use color_eyre::{Result, Section};
 use did_cli::DidMethodKind;
 use did_common::did::Did;
 use ed25519_dalek::SigningKey;
-use eyre::{eyre, Context};
+use eyre::{Context, eyre};
 use tracing::info;
 use tracing_subscriber::{
-	layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter,
+	EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _,
 };
 
 fn main() -> Result<()> {
