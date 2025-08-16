@@ -14,7 +14,7 @@ jobs:
     name: Check Formatting
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4.2.0
+      - uses: actions/checkout@v5
       - name: Check formatting
         run: cargo fmt --check --all
 
@@ -22,9 +22,9 @@ jobs:
     name: Lints
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4.2.0
+      - uses: actions/checkout@v5
       - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2.7.3
+        uses: Swatinem/rust-cache@v2.8.0
 
       - name: Clippy lints
         run: cargo clippy --profile artifact-dev --all --all-features --all-targets --no-deps -- -D warnings
@@ -36,12 +36,12 @@ jobs:
     name: Run Tests
     strategy:
       matrix:
-        runs-on: ["ubuntu-24.04", "windows-2022", "macos-14"]
+        runs-on: ["ubuntu-24.04", "windows-2025", "macos-15"]
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v4.2.0
+      - uses: actions/checkout@v5
       - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2.7.3
+        uses: Swatinem/rust-cache@v2.8.0
 
       - name: Test
         run: cargo test --profile artifact-dev --all --all-features --all-targets
@@ -50,7 +50,7 @@ jobs:
     name: Licensing and Advisories
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4.2.0
+    - uses: actions/checkout@v5
     - uses: EmbarkStudios/cargo-deny-action@v2.0.11
 
   build:
@@ -66,7 +66,7 @@ jobs:
     strategy:
       matrix:
         runner-vars:
-          - runs-on: macos-14
+          - runs-on: macos-15
             host-triple: aarch64-apple-darwin
             artifact-name: rust-macos
           - runs-on: ubuntu-24.04
@@ -74,12 +74,12 @@ jobs:
             artifact-name: rust-linux
     runs-on: ${{ matrix.runner-vars.runs-on }}
     steps:
-      - uses: actions/checkout@v4.2.0
+      - uses: actions/checkout@v5
       - uses: mlugg/setup-zig@v2.0.1
         with:
           version: 0.13.0
       - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2.7.3
+        uses: Swatinem/rust-cache@v2.8.0
 
       - name: Install mingw while cargo-zigbuild is broken
         if: startsWith(matrix.runner-vars.runs-on, 'ubuntu')
@@ -157,7 +157,7 @@ jobs:
           popd
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4.4.0
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.runner-vars.artifact-name }}
           if-no-files-found: error
@@ -171,7 +171,7 @@ jobs:
     needs: build
     steps:
       - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v4.4.0
+        uses: actions/upload-artifact/merge@v4
         with:
           name: rust
           compression-level: 9
