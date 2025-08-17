@@ -56,8 +56,8 @@ impl RouterConfig {
 			bail!("ip addresses not supported");
 		};
 		Ok(Router::new()
-			.route("/create/:handle", post(create))
-			.route("/users/:id/did.json", get(read))
+			.route("/create/{handle}", post(create))
+			.route("/users/{id}/did.json", get(read))
 			.route("/.well-known/nexus-did", get(read_handle))
 			.with_state(RouterState {
 				uuid_provider: Arc::new(self.uuid_provider),
@@ -227,7 +227,7 @@ impl IntoResponse for ReadHandleErr {
 }
 
 async fn read_handle(
-	host: axum::extract::Host,
+	host: axum_extra::extract::Host,
 	state: State<RouterState>,
 ) -> Result<String, ReadHandleErr> {
 	let Some(handle_prefix) = host

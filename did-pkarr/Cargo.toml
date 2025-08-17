@@ -26,12 +26,8 @@ ed25519-dalek.workspace = true
 eyre.workspace = true
 fluent-uri.workspace = true
 thiserror.workspace = true
+pkarr = { version = "3.10.0", default-features = false, features = ["signed_packet"] }
 
-[dependencies.pkarr]
-git = "https://github.com/pubky/pkarr.git"
-rev = "e9988cd" # Waiting for this to be released
-default-features = false
-features = ["signed_packet"]
 
 [dev-dependencies]
 hex-literal.workspace = true

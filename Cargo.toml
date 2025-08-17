@@ -22,47 +22,48 @@ rust-version = "1.89.0"
 [workspace.dependencies]
 arc-swap = "1.7.1"
 ascii = "1.1"
-axum = "0.7.5"
-axum-extra = "0.9.3"
-axum-macros = "0.4.1"
-axum-server = "0.7.1"
+async-trait = "0.1.89"
+axum = "0.8.4"
+axum-extra = "0.10.1"
+axum-macros = "0.5.0"
+axum-server = "0.7.2"
 base64 = "0.21.7"
-bon = "3.6.4"
+bon = "3.7.0"
 bytemuck = "1.23.1"
-clap = { version = "4.4.11", features = ["derive"] }
-color-eyre = "0.6"
-curve25519-dalek = "4.1.2"
+clap = { version = "4.5.45", features = ["derive"] }
+color-eyre = "0.6.5"
+curve25519-dalek = "4.1.3"
 did-simple.path = "did-simple"
 document-features = "0.2.11"
-dynosaur = "0.2.0"
-ed25519-dalek = "2.1.1"
-eyre = "0.6"
+dynosaur = "0.3.0"
+ed25519-dalek = "2.2.0"
+eyre = "0.6.12"
 fluent-uri = "0.3.2"
-futures = "0.3.30"
+futures = "0.3.31"
 header-parsing.path = "header-parsing"
 hex-literal = "1.0.0"
-http = "1.1.0"
-http-body-util = "0.1.2"
+http = "1.3.1"
+http-body-util = "0.1.3"
 jose-jwk = { version = "0.1.2", default-features = false }
 rand = "0.8.5"
 ref-cast = "1.0.24"
-reqwest = { version = "0.12.7", default-features = false }
+reqwest = { version = "0.12.23", default-features = false }
 rustls-acme = { version = "0.11.1", default-features = false }
-serde = { version = "1.0.193", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.114"
 serde_with = "3.12.0"
 sha2 = "0.10.9"
-thiserror = { version = "2.0.12", default-features = false }
-tokio = { version = "1.35.1", default-features = false }
+thiserror = { version = "2.0.15", default-features = false }
+tokio = { version = "1.47.1", default-features = false }
 toml = "0.8.19"
-tower = "0.4.13"
-tower-http = "0.5.2"
-tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tower = "0.5.2"
+tower-http = "0.6.6"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
 tracing-test = "0.2.5"
-url = "2.5.2"
+url = "2.5.4"
 uuid = "1.7.0"
-wiremock = "0.6.2"
+wiremock = "0.6.4"
 
 did-cli.path = "did-cli"
 did-common.path = "did-common"
@@ -71,7 +72,6 @@ did-pkarr.path = "did-pkarr"
 
 [workspace.dependencies.derive_more]
 version = "2.0.1"
-
 default-features = false
 
 [workspace.dependencies.bs58]
@@ -84,10 +84,6 @@ rev = "eea2e9d4f25bb5d79e2a21138531ca6d0ca18678"
 default-features = false
 git = "https://github.com/TheButlah/unsigned-varint.git"
 branch = "thebutlah/core-error"
-
-[profile.dev]
-# Enable a small amount of optimization in debug mode
-opt-level = 1
 
 [profile.dev.package."*"]
 # Enable high optimizations for dependencies, but not for our code:

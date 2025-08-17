@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use arc_swap::ArcSwap;
-use axum::async_trait;
+use async_trait::async_trait;
 use color_eyre::{Result, Section, eyre::WrapErr as _};
 use jsonwebtoken::jwk::JwkSet;
 use reqwest::Url;
