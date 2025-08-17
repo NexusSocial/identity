@@ -33,7 +33,7 @@ rustls-acme = { workspace = true, default-features = false, features = ["ring", 
 serde.workspace = true
 serde_json.workspace = true
 sqlformat = "=0.2.6" # TODO: Remove once they fix breakage
-sqlx = { version = "0.8.2", features = ["runtime-tokio", "tls-rustls", "sqlite", "uuid", "migrate"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "tls-rustls", "sqlite", "uuid", "migrate"] }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 toml.workspace = true
@@ -42,6 +42,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["std", "v4", "serde"] }
+async-trait.workspace = true
 
 [dev-dependencies]
 base64.workspace = true
