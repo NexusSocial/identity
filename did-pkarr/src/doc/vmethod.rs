@@ -6,7 +6,7 @@ use crate::dids::{Did, DidFromUriErr};
 
 /// A verification method most typically is a public key (via `did:key`), or a Did Url
 /// that links to a verification method in a different Did Document.
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone)]
 pub enum VerificationMethod {
 	/// A `did:key`. This does not include the fragment suffix, to save space.
 	DidKey(Did),

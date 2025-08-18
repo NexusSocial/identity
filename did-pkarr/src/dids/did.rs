@@ -30,6 +30,18 @@ impl Did {
 	}
 }
 
+impl PartialOrd for Did {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl Ord for Did {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		self.uri.cmp(&other.uri)
+	}
+}
+
 impl Display for Did {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", self.as_uri())

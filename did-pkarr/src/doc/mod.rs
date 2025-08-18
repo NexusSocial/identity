@@ -10,8 +10,9 @@ use pkarr::{
 	dns::{Name, rdata::RData},
 };
 
-use crate::dids::Did;
+use crate::{dids::Did, doc::builder::DidPkarrDocumentBuilder};
 
+pub(crate) mod builder;
 pub(crate) mod doc_contents;
 pub(crate) mod vmethod;
 pub(crate) mod vrelationship;
@@ -44,6 +45,10 @@ enum ToPkarrErrInner {
 }
 
 impl DidPkarrDocument {
+	pub fn builder(pubkey: pkarr::PublicKey) -> DidPkarrDocumentBuilder {
+		DidPkarrDocumentBuilder::new(pubkey)
+	}
+
 	/// Get the DID associated with this DID Document.
 	///
 	/// # Performance
