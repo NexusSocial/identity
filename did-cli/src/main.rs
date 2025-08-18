@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use clap::{Parser, Subcommand};
 use color_eyre::{Result, Section};
 use did_cli::DidMethodKind;
@@ -62,6 +64,11 @@ impl CreateCmd {
 			.create(method, &priv_key)
 			.wrap_err("failed to create did")?;
 		println!("{did}");
+
+		if method == DidMethodKind::Pkarr {
+			println!("sleeping forever to allow others to read the DID...");
+			std::thread::sleep(Duration::MAX);
+		}
 
 		Ok(())
 	}

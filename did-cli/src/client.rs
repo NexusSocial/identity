@@ -1,7 +1,7 @@
 use bon::bon;
 use did_common::did::Did;
 use did_key::DidKey;
-use did_pkarr::DidPkarr;
+use did_pkarr::{DidPkarr, DidPkarrDocument, PkarrClientBlockingExt};
 use ed25519_dalek::SigningKey;
 use eyre::{Result, WrapErr as _, eyre};
 use std::fmt::Debug;
@@ -69,7 +69,22 @@ impl ClientInner {
 
 				did
 			}
-			DidMethodKind::Pkarr => todo!(),
+			DidMethodKind::Pkarr => {
+				let doc = DidPkarrDocument::builder(pub_key.into()).finish();
+				PkarrClientBlockingExt::publish(
+					&self.pkarr.client,
+					&doc,
+					None,
+					priv_key,
+				)
+				.wrap_err("failed to publish to pkarr")?;
+
+				doc.did()
+					.as_uri()
+					.to_owned()
+					.try_into()
+					.expect("all PKARR dids are valid dids")
+			}
 		};
 
 		Ok(did)
