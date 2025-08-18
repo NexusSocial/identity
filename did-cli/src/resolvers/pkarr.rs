@@ -39,8 +39,8 @@ impl DidResolver for DidPkarrResolver {
 
 #[derive(Debug, bon::Builder)]
 pub struct DidPkarrResolverBlocking {
-	resolve_most_recent: bool,
-	client: did_pkarr::ClientBlocking,
+	pub(crate) resolve_most_recent: bool,
+	pub(crate) client: did_pkarr::ClientBlocking,
 }
 
 impl DidResolverBlocking for DidPkarrResolverBlocking {
