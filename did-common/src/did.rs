@@ -9,7 +9,7 @@ use crate::did_url::{DidUrl, DidUrlParseErr};
 /// resolved to a DID Document.
 ///
 /// [did-syntax]: https://www.w3.org/TR/did-1.1/#did-syntax
-#[derive(Debug, Eq, Clone)]
+#[derive(Debug, Eq, Clone, Hash)]
 pub struct Did {
 	// All DidUrls are Dids but not all Dids are DidUrls
 	inner: DidUrl,

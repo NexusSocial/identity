@@ -1,0 +1,18 @@
+[package]
+name = "pub-sub"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+bon.workspace = true
+dashmap.workspace = true
+derive_more = { workspace = true, features = ["from"] }
+did-common.workspace = true
+ed25519-dalek.workspace = true
+iroh-gossip.workspace = true
+iroh.workspace = true
+sha2.workspace = true
+bytes.workspace = true
