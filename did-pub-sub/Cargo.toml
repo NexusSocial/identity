@@ -1,5 +1,5 @@
 [package]
-name = "pub-sub"
+name = "did-pub-sub"
 version.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -8,6 +8,8 @@ rust-version.workspace = true
 
 [dependencies]
 bon.workspace = true
+bytes.workspace = true
+color-eyre.workspace = true
 dashmap.workspace = true
 derive_more = { workspace = true, features = ["from"] }
 did-common.workspace = true
@@ -15,4 +17,7 @@ ed25519-dalek.workspace = true
 iroh-gossip.workspace = true
 iroh.workspace = true
 sha2.workspace = true
-bytes.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tokio-util = { workspace = true, features = [] }
+tracing.workspace = true

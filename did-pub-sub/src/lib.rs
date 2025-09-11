@@ -7,50 +7,31 @@ use iroh::{Endpoint, SecretKey};
 use iroh_gossip::{api::GossipSender, net::Gossip, proto::TopicId};
 use sha2::{Digest, Sha256};
 
+use crate::topic::TopicHandle;
+
+mod topic;
+
 const HASH_CTX: &str = "did-pub-sub/v0";
 
-#[derive(Debug, Clone)]
-pub struct Client {
+#[derive(Debug)]
+pub struct ClientInner {
 	endpoint: iroh::Endpoint,
 	gossip: Gossip,
-	write_protected: Arc<DashMap<ProtectedTopic, Arc<ProtectedTopicData>>>,
+	topics: DashMap<ProtectedTopic, TopicHandle>,
 }
 
-impl Client {
+impl ClientInner {
 	pub fn new(endpoint: &Endpoint) -> Self {
 		let endpoint = endpoint.clone();
 		let gossip = Gossip::builder().spawn(endpoint.clone());
-		let write_protected = Arc::new(DashMap::new());
+		let topics = DashMap::new();
 
-		Client {
+		Self {
 			endpoint,
 			gossip,
-			write_protected,
+			topics,
 		}
 	}
-
-	pub fn write_protected(
-		&self,
-		topic: ProtectedTopic,
-		secret: SecretKey,
-		message: Bytes,
-	) {
-		let topic_data = if let Some(sender) = self.write_protected.get(&topic) {
-			sender.clone()
-		} else {
-			todo!()
-		};
-	}
-
-	pub fn read_protected(&self, topic: ProtectedTopic) -> Option<Bytes> {
-		todo!()
-	}
-}
-
-#[derive(Debug)]
-struct ProtectedTopicData {
-	msg: Bytes,
-	iroh_topic: GossipSender,
 }
 
 /// A topic that can only be published to by a particular DID.

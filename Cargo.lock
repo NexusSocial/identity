@@ -1289,6 +1289,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "did-pub-sub"
+version = "0.0.0"
+dependencies = [
+ "bon",
+ "bytes",
+ "color-eyre",
+ "dashmap",
+ "derive_more 2.0.1",
+ "did-common",
+ "ed25519-dalek",
+ "iroh",
+ "iroh-gossip",
+ "sha2",
+ "thiserror 2.0.15",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "did-simple"
 version = "0.0.2"
 dependencies = [
@@ -3836,21 +3856,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89ae43fd86e4158d6db51ad8e2b80f313af9cc74f5c0e03ccb87de09998732de"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "pub-sub"
-version = "0.0.0"
-dependencies = [
- "bon",
- "bytes",
- "dashmap",
- "derive_more 2.0.1",
- "did-common",
- "ed25519-dalek",
- "iroh",
- "iroh-gossip",
- "sha2",
 ]
 
 [[package]]
