@@ -1,5 +1,5 @@
 use alloc::{borrow::ToOwned as _, string::String};
-use core::{num::NonZeroU16, ops::Range, str::FromStr};
+use core::{hash::Hash, num::NonZeroU16, ops::Range, str::FromStr};
 
 use crate::uri::{NotAUriErr, Uri};
 
@@ -86,6 +86,12 @@ impl DidUrl {
 impl PartialOrd for DidUrl {
 	fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
 		Some(self.cmp(other))
+	}
+}
+
+impl Hash for DidUrl {
+	fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+		self.as_str().hash(state)
 	}
 }
 
