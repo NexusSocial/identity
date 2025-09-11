@@ -52,6 +52,18 @@ jobs:
     steps:
     - uses: actions/checkout@v5
     - uses: EmbarkStudios/cargo-deny-action@v2.0.11
+      name: Check licenses
+      with:
+        command: check licenses
+    - uses: EmbarkStudios/cargo-deny-action@v2.0.11
+      name: Check sources
+      with:
+        command: check sources
+    - uses: EmbarkStudios/cargo-deny-action@v2.0.11
+      name: Check advisories
+      with:
+        command: check advisories
+
 
   build:
     name: Build Binaries
