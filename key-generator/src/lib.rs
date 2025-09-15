@@ -23,7 +23,7 @@ pub struct Ed25519SigningKey(pub [u8; ED25519_SIGNING_KEY_BYTES]);
 
 impl fmt::Debug for Ed25519SigningKey {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_struct("Ed25519SigningKey").finish_non_exhaustive()
+		f.debug_tuple("Ed25519SigningKey").finish_non_exhaustive()
 	}
 }
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
