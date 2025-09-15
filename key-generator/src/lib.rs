@@ -31,7 +31,7 @@ struct Seed([u8; SEED_BYTES]);
 
 impl fmt::Debug for Seed {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_struct("Seed").finish_non_exhaustive()
+		f.debug_tuple("Seed").finish_non_exhaustive()
 	}
 }
 
