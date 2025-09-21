@@ -18,6 +18,7 @@ const SEED_BYTES: usize = 64;
 const PURPOSE: u32 = 1778203272 >> 1; // Randomly generated
 const COIN_TYPE: u32 = 1648924679 >> 1; // Randomly generated
 
+// TODO: Dalek only impls clone. Maybe we should not implement these?
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Ed25519SigningKey(pub [u8; ED25519_SIGNING_KEY_BYTES]);
 
@@ -26,6 +27,14 @@ impl fmt::Debug for Ed25519SigningKey {
 		f.debug_tuple("Ed25519SigningKey").finish_non_exhaustive()
 	}
 }
+
+#[cfg(feature = "dalek")]
+impl From<Ed25519SigningKey> for ed25519_dalek::SigningKey {
+	fn from(value: Ed25519SigningKey) -> Self {
+		ed25519_dalek::SigningKey::from_bytes(&value.0)
+	}
+}
+
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 struct Seed([u8; SEED_BYTES]);
 
@@ -51,6 +60,10 @@ impl MnemonicWrapper {
 		let (array, len) = self.0.to_entropy_array();
 
 		array[0..len].try_into().expect("infallible")
+	}
+
+	fn as_display(&self) -> &(impl core::fmt::Display + core::fmt::Debug) {
+		&self.0
 	}
 }
 
@@ -145,6 +158,12 @@ impl RecoveryPhrase {
 		Ok(Ed25519SigningKey(signing_key))
 	}
 
+	/// Returns a type that can be displayed. Be careful not to leak this anywhere
+	/// as it is supposed to be kept secret.
+	pub fn as_display(&self) -> &(impl core::fmt::Display + core::fmt::Debug) {
+		self.phrase.as_display()
+	}
+
 	/// Helper function to generate the seed from the mnemonic + password. Set password
 	/// to empty string if no password is desired.
 	fn to_seed(&self, password: &str) -> Result<Seed, PasswordError> {
@@ -171,7 +190,16 @@ impl RecoveryPhrase {
 use recovery_phrase_builder::{IsUnset, SetEntropy, SetLanguage, State};
 
 impl<'a, S: State> RecoveryPhraseBuilder<'a, S> {
-	pub fn rng(
+	#[cfg(feature = "os-rng")]
+	pub fn random(self) -> RecoveryPhraseBuilder<'a, SetEntropy<S>>
+	where
+		S::Entropy: IsUnset,
+	{
+		let mut rng = rand_core::UnwrapErr(rand_core::OsRng);
+		self.from_rng(&mut rng)
+	}
+
+	pub fn from_rng(
 		self,
 		value: &mut impl CryptoRng,
 	) -> RecoveryPhraseBuilder<'a, SetEntropy<S>>
@@ -183,7 +211,7 @@ impl<'a, S: State> RecoveryPhraseBuilder<'a, S> {
 		self.entropy(entropy)
 	}
 
-	pub fn phrase(
+	pub fn from_phrase(
 		self,
 		phrase: &str,
 	) -> Result<RecoveryPhraseBuilder<'a, SetLanguage<SetEntropy<S>>>, bip39::Error>
@@ -244,7 +272,7 @@ mod test {
 
 		let phrase = RecoveryPhrase::builder()
 			.language(Language::English)
-			.rng(&mut rng)
+			.from_rng(&mut rng)
 			.build();
 		assert_eq!(phrase.as_words().count(), PHRASE_LEN);
 		assert!(
@@ -272,7 +300,7 @@ mod test {
 
 			let phrase_from_phrase = RecoveryPhrase::builder()
 				.password(e.password)
-				.phrase(e.phrase)
+				.from_phrase(e.phrase)
 				.unwrap()
 				.build();
 			assert_eq!(phrase_from_phrase, phrase_from_entropy);
@@ -318,8 +346,10 @@ mod test {
 				assert_eq!(a, b);
 			}
 
-			let phrase_from_phrase =
-				RecoveryPhrase::builder().phrase(e.phrase).unwrap().build();
+			let phrase_from_phrase = RecoveryPhrase::builder()
+				.from_phrase(e.phrase)
+				.unwrap()
+				.build();
 			assert_eq!(phrase_from_phrase, phrase_from_entropy);
 
 			assert_eq!(
