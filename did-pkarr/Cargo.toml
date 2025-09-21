@@ -18,7 +18,7 @@ dht = ["pkarr/dht"]
 http = ["pkarr/relays"]
 
 [dependencies]
-base32 = "0.5.1"
+base32.workspace = true
 base64.workspace = true
 bitflags = { version = "2.9.1", default-features = false, features = ["bytemuck"] }
 bytemuck = { workspace = true, features = ["derive" ] }
