@@ -7,9 +7,10 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
-default = ["os-rng", "dalek"]
+default = ["os-rng", "dalek", "export"]
 dalek = ["dep:ed25519-dalek"] # enables conversions to dalek types
 os-rng = ["rand_core/os_rng"] # enables helper function to generate phrase from OsRng
+export = [] # enables export to PDF, PNG, etc
 
 [dependencies]
 bon.workspace = true
@@ -26,13 +27,18 @@ default-features = false
 features = ["all-languages", "unicode-normalization", "zeroize", "alloc" ]
 
 [dev-dependencies]
+usvg = { version = "0.45.1", features = ["text"] }
+svg2pdf = "0.13.0"
 base32.workspace = true
 base64.workspace = true
 bs58 = { workspace = true, features = ["std"] }
 clap = { workspace = true, features = ["derive"] }
 color-eyre.workspace = true
 ed25519-dalek = { workspace = true, default-features = true }
+font8x8 = "0.3.1"
 hex-literal.workspace = true
 hex.workspace = true
 owo-colors.workspace = true
+png = "0.18.0"
 rand = "0.9.2"
+pdf-writer = "0.13.0"
