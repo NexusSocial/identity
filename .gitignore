@@ -40,3 +40,6 @@ my-config.toml
 **/msbuild.wrn
 
 /docs/book/
+
+recovery_kit.pdf
+recovery_kit.svg
