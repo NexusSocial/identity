@@ -57,6 +57,8 @@ pub struct key_gen_exports {
 	pub svg_contents: RVec, // guaranteed to be utf8
 }
 
+/// # Safety
+/// `app_name` must be null terminated.
 #[cfg(feature = "export-pdf")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn key_gen_export(

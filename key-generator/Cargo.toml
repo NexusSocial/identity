@@ -7,7 +7,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
-# default = ["dalek", "export-pdf", "os-rng"]
+default = ["dalek", "export-pdf", "os-rng"]
 dalek = ["dep:ed25519-dalek"] # enables conversions to dalek types
 export-pdf = ["dep:pdf-writer"] # enables export to PDF, SVG, etc
 os-rng = ["rand_core/os_rng"] # enables helper function to generate phrase from OsRng

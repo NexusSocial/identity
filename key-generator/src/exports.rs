@@ -107,7 +107,6 @@ impl PdfGenerator<'_, '_> {
 			.pair(FontStyle::Bold.into(), font_bold_r)
 			.pair(FontStyle::Regular.into(), font_reg_r)
 			.pair(FontStyle::Mono.into(), font_mono_r)
-			.finish()
 			.finish();
 
 		// Built-in Type1 fonts (no embedding)
@@ -533,7 +532,7 @@ impl ContentExt for Content {
 
 // Uses native PDF coordinate system, 0,0 bottom left
 fn rounded(c: &mut Content, x: f32, y: f32, w: f32, h: f32, r: f32) {
-	let k = 0.552_284_75_f32; // circle-to-bezier kappa
+	let k = 0.552_284_8_f32; // circle-to-bezier kappa
 	let ox = r * k;
 	let oy = r * k;
 
