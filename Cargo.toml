@@ -10,6 +10,7 @@ members = [
 	"header-parsing",
 	"identity-server",
 	"key-generator",
+	"key-generator/c-api",
 ]
 
 # These settings will apply to all members of the workspace that opt in to them
@@ -98,10 +99,16 @@ opt-level = 2
 
 # What we use when producing artifacts to distribute, size matters more than speed
 [profile.artifact]
+codegen-units = 1
 inherits = "release"
 lto = true
 strip = true
 debug = false
+
+[profile.small]
+inherits = "artifact"
+opt-level = "z"
+panic = "abort"
 
 # What we use when producing artifacts in PRs, speed matters more than size
 [profile.artifact-dev]

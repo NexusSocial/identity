@@ -1,7 +1,13 @@
 #![no_std]
 #![forbid(unsafe_code)]
 
-use core::fmt;
+#[cfg(feature = "export-pdf")]
+extern crate alloc;
+
+#[cfg(feature = "export-pdf")]
+mod exports;
+
+use core::{fmt, ops::Deref};
 
 use bip39::{Language, Mnemonic};
 use bon::bon;
@@ -14,6 +20,7 @@ type HmacSha256 = Hmac<Sha256>;
 const ED25519_SIGNING_KEY_BYTES: usize = 32;
 const SHA256_BYTES: usize = 32;
 const ENTROPY_BYTES: usize = 32;
+const PHRASE_LEN: usize = 24;
 const SEED_BYTES: usize = 64;
 const PURPOSE: u32 = 1778203272 >> 1; // Randomly generated
 const COIN_TYPE: u32 = 1648924679 >> 1; // Randomly generated
@@ -108,6 +115,41 @@ pub struct RecoveryPhrase {
 	passphrase_hmac: Option<PassphraseHmac>,
 }
 
+#[derive(Debug, thiserror::Error, Copy, Clone)]
+#[error("was not ascii")]
+pub struct AsciiErr;
+
+#[derive(Default, Copy, Clone)]
+pub struct Ascii<'a>(&'a str);
+
+impl<'a> Ascii<'a> {
+	pub const EMPTY: Self = Ascii("");
+
+	pub const fn try_from_const(s: &'a str) -> Result<Self, AsciiErr> {
+		if !s.is_ascii() {
+			return Err(AsciiErr);
+		}
+
+		Ok(Self(s))
+	}
+}
+
+impl Deref for Ascii<'_> {
+	type Target = str;
+
+	fn deref(&self) -> &Self::Target {
+		self.0
+	}
+}
+
+impl<'a> TryFrom<&'a str> for Ascii<'a> {
+	type Error = AsciiErr;
+
+	fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+		Self::try_from_const(value)
+	}
+}
+
 #[bon]
 impl RecoveryPhrase {
 	#[builder]
@@ -117,13 +159,13 @@ impl RecoveryPhrase {
 		#[builder(default = Language::English)]
 		language: Language,
 		entropy: [u8; ENTROPY_BYTES],
-		#[builder(default)] password: &str,
+		#[builder(default)] password: Ascii<'_>,
 	) -> Self {
 		let phrase = MnemonicWrapper::generate_from_entropy(language, &entropy);
-		let passphrase_hmac = if password.is_empty() {
+		let passphrase_hmac = if password.0.is_empty() {
 			None
 		} else {
-			Some(PassphraseHmac::new(&phrase, password))
+			Some(PassphraseHmac::new(&phrase, password.0))
 		};
 
 		RecoveryPhrase {
@@ -132,8 +174,16 @@ impl RecoveryPhrase {
 		}
 	}
 
-	pub fn as_words(&self) -> impl Iterator<Item = &'static str> + Clone + '_ {
-		self.phrase.0.words()
+	pub fn to_words(&self) -> [&'static str; PHRASE_LEN] {
+		let mut buf = [""; PHRASE_LEN];
+		let mut i = 0;
+		for w in self.phrase.0.words() {
+			buf[i] = w;
+			i += 1;
+		}
+		assert_eq!(PHRASE_LEN, i, "sanity");
+
+		buf
 	}
 
 	pub fn is_password_protected(&self) -> bool {
@@ -145,7 +195,7 @@ impl RecoveryPhrase {
 	/// account.
 	pub fn to_key(
 		&self,
-		password: &str,
+		password: Ascii<'_>,
 		account: u16,
 	) -> Result<Ed25519SigningKey, PasswordError> {
 		let seed = self.to_seed(password)?;
@@ -164,11 +214,21 @@ impl RecoveryPhrase {
 		self.phrase.as_display()
 	}
 
+	#[cfg(feature = "export-pdf")]
+	pub fn export(&self, app_name: &str) -> crate::exports::Exports {
+		crate::exports::PdfGenerator {
+			words: self.to_words(),
+			app_name,
+			password: self.is_password_protected(),
+		}
+		.build()
+	}
+
 	/// Helper function to generate the seed from the mnemonic + password. Set password
 	/// to empty string if no password is desired.
-	fn to_seed(&self, password: &str) -> Result<Seed, PasswordError> {
+	fn to_seed(&self, password: Ascii) -> Result<Seed, PasswordError> {
 		let is_password_protected = self.passphrase_hmac.is_some();
-		match (is_password_protected, password.is_empty()) {
+		match (is_password_protected, password.0.is_empty()) {
 			(false, true) => (),
 			(true, true) => return Err(PasswordError::ExpectedPassword),
 			(false, false) => return Err(PasswordError::UnexpectedPassword),
@@ -176,14 +236,14 @@ impl RecoveryPhrase {
 				let Some(ref expected_hmac) = self.passphrase_hmac else {
 					unreachable!()
 				};
-				let candidate_hmac = PassphraseHmac::new(&self.phrase, password);
+				let candidate_hmac = PassphraseHmac::new(&self.phrase, password.0);
 				if &candidate_hmac != expected_hmac {
 					return Err(PasswordError::IncorrectPassword);
 				}
 			}
 		}
 
-		Ok(Seed(self.phrase.0.to_seed(password)))
+		Ok(Seed(self.phrase.0.to_seed_normalized(password.0)))
 	}
 }
 
@@ -213,13 +273,16 @@ impl<'a, S: State> RecoveryPhraseBuilder<'a, S> {
 
 	pub fn from_phrase(
 		self,
-		phrase: &str,
+		phrase: Ascii,
 	) -> Result<RecoveryPhraseBuilder<'a, SetLanguage<SetEntropy<S>>>, bip39::Error>
 	where
 		S::Entropy: IsUnset,
 		S::Language: IsUnset,
 	{
-		let m = MnemonicWrapper::from(Mnemonic::parse(phrase)?);
+		let m = MnemonicWrapper::from(Mnemonic::parse_in_normalized(
+			Language::English,
+			phrase.0,
+		)?);
 		Ok(self.entropy(m.to_entropy()).language(m.0.language()))
 	}
 }
@@ -241,14 +304,20 @@ mod test {
 	use rand::rngs::StdRng;
 	use rand_core::SeedableRng;
 
-	const PHRASE_LEN: usize = 24;
-
 	struct Example {
 		entropy: [u8; ENTROPY_BYTES],
-		phrase: &'static str, // `PHRASE_LEN` words
-		password: &'static str,
+		phrase: Ascii<'static>, // `PHRASE_LEN` words
+		password: Ascii<'static>,
 		seed_with_password: [u8; SEED_BYTES],
 		seed_empty_password: [u8; SEED_BYTES],
+	}
+
+	const fn u<T: Copy, E: Copy>(r: Result<T, E>) -> T {
+		let Ok(t) = r else {
+			panic!("failed to unwrap");
+		};
+
+		t
 	}
 
 	// Generated from https://iancoleman.io/bip39/
@@ -256,8 +325,10 @@ mod test {
 		entropy: hex!(
 			"71bac318678fd69a3f51fc225a968f04003bcc37235473ccb95aad0a14f495c7"
 		),
-		phrase: "immune stock ship someone word escape wool display car start phrase amount admit toward symptom hedgehog inherit grape find foam pattern kid finish toast",
-		password: "foobar",
+		phrase: u(Ascii::try_from_const(
+			"immune stock ship someone word escape wool display car start phrase amount admit toward symptom hedgehog inherit grape find foam pattern kid finish toast",
+		)),
+		password: u(Ascii::try_from_const("foobar")),
 		seed_with_password: hex!(
 			"4b557b4918eccf77831c4771d8a222307cf11755c614f7623976cbe5ee8e0d2262a526ff1f0818d1ddf4e7f8526af68ea1ff980f8dc47529aa4ae8d43316974d"
 		),
@@ -274,10 +345,11 @@ mod test {
 			.language(Language::English)
 			.from_rng(&mut rng)
 			.build();
-		assert_eq!(phrase.as_words().count(), PHRASE_LEN);
+		assert_eq!(phrase.to_words().len(), PHRASE_LEN);
 		assert!(
 			phrase
-				.as_words()
+				.to_words()
+				.into_iter()
 				.all(|w| Language::English.find_word(w).is_some())
 		);
 	}
@@ -293,8 +365,12 @@ mod test {
 
 			let expected_iter = e.phrase.split(" ");
 			assert_eq!(expected_iter.clone().count(), PHRASE_LEN);
-			assert_eq!(phrase_from_entropy.as_words().count(), 24);
-			for (a, b) in phrase_from_entropy.as_words().zip(expected_iter) {
+			assert_eq!(phrase_from_entropy.to_words().len(), PHRASE_LEN);
+			for (a, b) in phrase_from_entropy
+				.to_words()
+				.into_iter()
+				.zip(expected_iter)
+			{
 				assert_eq!(a, b);
 			}
 
@@ -306,20 +382,20 @@ mod test {
 			assert_eq!(phrase_from_phrase, phrase_from_entropy);
 
 			assert_eq!(
-				phrase_from_entropy.to_seed(""),
+				phrase_from_entropy.to_seed(Ascii::EMPTY),
 				Err(PasswordError::ExpectedPassword),
 			);
 			assert_eq!(
-				phrase_from_entropy.to_key("", 0),
+				phrase_from_entropy.to_key(Ascii::EMPTY, 0),
 				Err(PasswordError::ExpectedPassword),
 			);
 
 			assert_eq!(
-				phrase_from_entropy.to_seed("non-empty"),
+				phrase_from_entropy.to_seed("non-empty".try_into().unwrap()),
 				Err(PasswordError::IncorrectPassword)
 			);
 			assert_eq!(
-				phrase_from_entropy.to_key("non-empty", 0),
+				phrase_from_entropy.to_key("non-empty".try_into().unwrap(), 0),
 				Err(PasswordError::IncorrectPassword)
 			);
 
@@ -341,8 +417,12 @@ mod test {
 
 			let expected_iter = e.phrase.split(" ");
 			assert_eq!(expected_iter.clone().count(), PHRASE_LEN);
-			assert_eq!(phrase_from_entropy.as_words().count(), 24);
-			for (a, b) in phrase_from_entropy.as_words().zip(expected_iter) {
+			assert_eq!(phrase_from_entropy.to_words().len(), PHRASE_LEN);
+			for (a, b) in phrase_from_entropy
+				.to_words()
+				.into_iter()
+				.zip(expected_iter)
+			{
 				assert_eq!(a, b);
 			}
 
@@ -353,17 +433,17 @@ mod test {
 			assert_eq!(phrase_from_phrase, phrase_from_entropy);
 
 			assert_eq!(
-				phrase_from_entropy.to_seed("").unwrap().0,
+				phrase_from_entropy.to_seed(Ascii::EMPTY).unwrap().0,
 				e.seed_empty_password
 			);
-			assert!(phrase_from_entropy.to_key("", 0).is_ok());
+			assert!(phrase_from_entropy.to_key(Ascii::EMPTY, 0).is_ok());
 
 			assert_eq!(
-				phrase_from_entropy.to_seed("non-empty"),
+				phrase_from_entropy.to_seed("non-empty".try_into().unwrap()),
 				Err(PasswordError::UnexpectedPassword)
 			);
 			assert_eq!(
-				phrase_from_entropy.to_key("non-empty", 0),
+				phrase_from_entropy.to_key("non-empty".try_into().unwrap(), 0),
 				Err(PasswordError::UnexpectedPassword)
 			);
 

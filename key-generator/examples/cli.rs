@@ -1,6 +1,9 @@
+use std::{io::Write, path::PathBuf};
+
 use clap::Parser;
-use color_eyre::Result;
+use color_eyre::{Result, eyre::Context};
 use ed25519_dalek::{SigningKey, ed25519::signature::SignerMut};
+use key_generator::Ascii;
 use owo_colors::OwoColorize;
 
 fn main() -> Result<()> {
@@ -24,6 +27,9 @@ enum Args {
 struct NewCmd {
 	#[arg(long, default_value = "")]
 	password: String,
+
+	#[arg(long, default_value = "Basis")]
+	app_name: String,
 
 	/// The account number to inspect
 	#[arg(long, default_value_t = 0)]
@@ -59,12 +65,14 @@ impl NewCmd {
 		} else {
 			encode_hex
 		};
+		let pass = Ascii::try_from(self.password.as_str()).unwrap();
 		let phrase = key_generator::RecoveryPhrase::builder()
-			.random()
-			.password(&self.password)
+			.entropy([13; 32])
+			// .random()
+			.password(pass)
 			.build();
 		let mut signing_key: SigningKey =
-			phrase.to_key("", 0).expect("password is correct").into();
+			phrase.to_key(pass, 0).expect("password is correct").into();
 
 		if self.print_private_key {
 			let private_key_encoded = encode(signing_key.as_bytes());
@@ -100,6 +108,23 @@ impl NewCmd {
 			"signature".bold().green(),
 			EXAMPLE_MESSAGE.italic()
 		);
+
+		let exports = phrase.export(&self.app_name);
+
+		for (contents, ext) in [
+			(exports.pdf_contents, "pdf"),
+			(exports.svg_contents.into_bytes(), "svg"),
+		] {
+			let file_path = PathBuf::from(format!("recovery_kit.{ext}"));
+			let file = std::fs::File::create(&file_path)
+				.wrap_err_with(|| format!("failed to open {file_path:?}"))?;
+			let mut buf_writer = std::io::BufWriter::new(file);
+			buf_writer
+				.write_all(&contents)
+				.and_then(|()| buf_writer.into_inner().map_err(|err| err.into_error()))
+				.and_then(|w| w.sync_all())
+				.wrap_err_with(|| format!("failed to write to {file_path:?}"))?;
+		}
 
 		Ok(())
 	}
