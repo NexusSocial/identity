@@ -1,0 +1,18 @@
+[package]
+name = "key-generator-capi"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["os-rng", "export-pdf"]
+os-rng = ["key-generator/os-rng"] # enables helper function to generate phrase from OsRng
+export-pdf = ["key-generator/export-pdf"] # enables export to PDF, SVG, etc
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+key-generator = { path = "../", default-features = false }
