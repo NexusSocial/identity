@@ -433,17 +433,17 @@ mod test {
 			assert_eq!(phrase_from_phrase, phrase_from_entropy);
 
 			assert_eq!(
-				phrase_from_entropy.to_seed("").unwrap().0,
+				phrase_from_entropy.to_seed(Ascii::EMPTY).unwrap().0,
 				e.seed_empty_password
 			);
-			assert!(phrase_from_entropy.to_key("", 0).is_ok());
+			assert!(phrase_from_entropy.to_key(Ascii::EMPTY, 0).is_ok());
 
 			assert_eq!(
-				phrase_from_entropy.to_seed("non-empty"),
+				phrase_from_entropy.to_seed("non-empty".try_into().unwrap()),
 				Err(PasswordError::UnexpectedPassword)
 			);
 			assert_eq!(
-				phrase_from_entropy.to_key("non-empty", 0),
+				phrase_from_entropy.to_key("non-empty".try_into().unwrap(), 0),
 				Err(PasswordError::UnexpectedPassword)
 			);
 

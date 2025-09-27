@@ -1,5 +1,4 @@
-use std::io::Write;
-use std::path::Path;
+use std::{io::Write, path::PathBuf};
 
 use clap::Parser;
 use color_eyre::{Result, eyre::Context};
@@ -68,7 +67,8 @@ impl NewCmd {
 		};
 		let pass = Ascii::try_from(self.password.as_str()).unwrap();
 		let phrase = key_generator::RecoveryPhrase::builder()
-			.random()
+			.entropy([13; 32])
+			// .random()
 			.password(pass)
 			.build();
 		let mut signing_key: SigningKey =
@@ -108,18 +108,23 @@ impl NewCmd {
 			"signature".bold().green(),
 			EXAMPLE_MESSAGE.italic()
 		);
-		// let exports = phrase.export(&self.app_name);
 
-		let file_path = Path::new("recovery_kit.pdf");
-		let file = std::fs::File::create(file_path)
-			.wrap_err_with(|| format!("failed to open {file_path:?}"))?;
-		let mut buf_writer = std::io::BufWriter::new(file);
-		buf_writer
-			// .write_all(&exports.pdf_contents)
-			.write_all(&vec![10; 1024])
-			.and_then(|()| buf_writer.into_inner().map_err(|err| err.into_error()))
-			.and_then(|w| w.sync_all())
-			.wrap_err_with(|| format!("failed to write to {file_path:?}"))?;
+		let exports = phrase.export(&self.app_name);
+
+		for (contents, ext) in [
+			(exports.pdf_contents, "pdf"),
+			(exports.svg_contents.into_bytes(), "svg"),
+		] {
+			let file_path = PathBuf::from(format!("recovery_kit.{ext}"));
+			let file = std::fs::File::create(&file_path)
+				.wrap_err_with(|| format!("failed to open {file_path:?}"))?;
+			let mut buf_writer = std::io::BufWriter::new(file);
+			buf_writer
+				.write_all(&contents)
+				.and_then(|()| buf_writer.into_inner().map_err(|err| err.into_error()))
+				.and_then(|w| w.sync_all())
+				.wrap_err_with(|| format!("failed to write to {file_path:?}"))?;
+		}
 
 		Ok(())
 	}
