@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-/// An owned Vec<u8>
+/// An owned `Vec<u8>`
 #[repr(C)]
 pub struct key_gen_RVec {
 	pub data: *mut u8,

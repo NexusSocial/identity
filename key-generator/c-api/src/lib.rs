@@ -63,7 +63,7 @@ pub struct key_gen_exports {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn key_gen_export(
 	phrase: &key_gen_phrase,
-	app_name: *const u8,
+	app_name: *const core::ffi::c_char,
 ) -> key_gen_exports {
 	let phrase = RecoveryPhrase::builder().entropy(phrase.entropy).build();
 	let app_name = unsafe { core::ffi::CStr::from_ptr(app_name) };
