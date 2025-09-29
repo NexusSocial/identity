@@ -18,9 +18,8 @@ NOTE: no-std is not actually true rn due to `slip10_ed25519`, we will fork and f
 
 ## Optional Features
 
-* TODO: If the `qr-code` feature is enabled, we use the [typst][typst] crate to
-  generate a user-friendly PDF. This requires `std`.
+* `export-pdf` feature enables generation of a PDF, to make it easy for users to print
+  out an account "Recovery Kit"
 
 [BIP-39]: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
 [SLIP-0010]: https://github.com/satoshilabs/slips/blob/master/slip-0010.md
-[typst]: https://typst.app/
